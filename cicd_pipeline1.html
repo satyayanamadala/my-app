@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CI/CD Pipeline — Jenkins · Docker · Kubernetes</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void:#020408; --deep:#040c14; --panel:#060f1a;
+  --rim:rgba(0,200,255,0.12); --neon:#00c8ff; --neon2:#ff3e7f;
+  --neon3:#a0ff00; --gold:#ffd166; --text:#d0e8f5; --muted:#4a6a80; --bright:#f0f8ff;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--void);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:0;background-image:radial-gradient(1px 1px at 15% 20%,rgba(255,255,255,0.6) 0%,transparent 100%),radial-gradient(1px 1px at 40% 70%,rgba(255,255,255,0.4) 0%,transparent 100%),radial-gradient(1px 1px at 70% 15%,rgba(255,255,255,0.5) 0%,transparent 100%),radial-gradient(2px 2px at 90% 80%,rgba(0,200,255,0.4) 0%,transparent 100%),radial-gradient(2px 2px at 10% 50%,rgba(160,255,0,0.3) 0%,transparent 100%);pointer-events:none;}
+body::after{content:'';position:fixed;inset:0;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);pointer-events:none;}
+.wrap{position:relative;z-index:1;}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 40px;position:relative;text-align:center;}
+.ring{position:absolute;width:600px;height:600px;border:1px solid rgba(0,200,255,0.05);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);animation:spin 40s linear infinite;}
+.ring::before{content:'';position:absolute;width:6px;height:6px;background:var(--neon);border-radius:50%;top:-3px;left:50%;box-shadow:0 0 12px var(--neon),0 0 24px var(--neon);}
+.ring-2{width:400px;height:400px;border-color:rgba(255,62,127,0.05);animation-duration:25s;animation-direction:reverse;}
+.ring-2::before{background:var(--neon2);box-shadow:0 0 12px var(--neon2),0 0 24px var(--neon2);}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.hero-eyebrow{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:6px;color:var(--neon);text-shadow:0 0 20px var(--neon);margin-bottom:28px;animation:fadeUp 0.8s ease forwards;}
+.hero h1{font-family:'Orbitron',sans-serif;font-size:clamp(36px,6vw,80px);font-weight:900;line-height:1.0;margin-bottom:8px;animation:fadeUp 0.8s 0.1s ease both;}
+.line1{color:var(--bright);display:block;}
+.line2{background:linear-gradient(90deg,var(--neon),var(--neon2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:block;}
+.hero-sub{font-size:16px;font-weight:300;color:var(--muted);max-width:520px;line-height:1.7;margin:20px auto 48px;animation:fadeUp 0.8s 0.2s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.tech-row{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;animation:fadeUp 0.8s 0.3s ease both;}
+.tech-pill{display:flex;align-items:center;gap:10px;padding:10px 22px;border:1px solid;clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;font-weight:600;transition:all 0.3s;cursor:default;}
+.tech-pill:hover{filter:brightness(1.4);}
+.tp-j{border-color:#d33833;color:#ff7070;background:rgba(211,56,51,0.08);}
+.tp-d{border-color:#2496ed;color:#70c0ff;background:rgba(36,150,237,0.08);}
+.tp-k{border-color:#5a6dff;color:#8a9fff;background:rgba(90,109,255,0.08);}
+.tp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;animation:blink 1.6s infinite;}
+.tp-j .tp-dot{background:#d33833;}.tp-d .tp-dot{background:#2496ed;}.tp-k .tp-dot{background:#5a6dff;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* SECTION */
+.section{padding:80px 40px;max-width:1200px;margin:0 auto;}
+.sec-label{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:5px;color:var(--neon);text-shadow:0 0 15px var(--neon);margin-bottom:12px;}
+.sec-title{font-family:'Orbitron',sans-serif;font-size:clamp(18px,2.5vw,28px);font-weight:700;color:var(--bright);margin-bottom:48px;border-left:3px solid var(--neon);padding-left:18px;box-shadow:-6px 0 20px rgba(0,200,255,0.15);}
+
+/* HEX PIPELINE */
+.hex-pipeline{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:80px;row-gap:20px;}
+.hex-wrap{display:flex;align-items:center;}
+.hex{width:110px;height:126px;position:relative;cursor:pointer;transition:transform 0.3s;}
+.hex:hover{transform:scale(1.08) translateY(-4px);}
+.hex svg{width:100%;height:100%;position:absolute;top:0;left:0;}
+.hex-content{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 6px;text-align:center;z-index:2;}
+.hex-icon{font-size:24px;margin-bottom:5px;}
+.hex-num{font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:2px;color:var(--muted);margin-bottom:3px;}
+.hex-name{font-size:11px;font-weight:600;color:var(--bright);line-height:1.3;}
+.hex-connector{width:28px;height:2px;background:linear-gradient(90deg,var(--neon),rgba(0,200,255,0.1));position:relative;flex-shrink:0;}
+.hex-connector::after{content:'▶';position:absolute;right:-6px;top:50%;transform:translateY(-50%);color:var(--neon);font-size:9px;text-shadow:0 0 8px var(--neon);}
+
+/* CARDS GRID */
+.cards-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;grid-template-rows:auto auto;gap:2px;margin-bottom:80px;}
+.ag-card{background:var(--panel);border:1px solid var(--rim);padding:28px;position:relative;overflow:hidden;transition:border-color 0.3s;}
+.ag-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.ag-card.cn::before{background:linear-gradient(90deg,var(--neon),transparent);}
+.ag-card.cp::before{background:linear-gradient(90deg,var(--neon2),transparent);}
+.ag-card.cl::before{background:linear-gradient(90deg,var(--neon3),transparent);}
+.ag-card.cg::before{background:linear-gradient(90deg,var(--gold),transparent);}
+.ag-card:hover{border-color:rgba(0,200,255,0.3);}
+.ag-card.span2{grid-column:span 2;}
+.ag-card.row2{grid-row:span 2;}
+.ag-tag{font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:3px;margin-bottom:12px;display:inline-block;padding:3px 10px;border:1px solid;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);}
+.cn .ag-tag{color:var(--neon);border-color:rgba(0,200,255,0.3);}
+.cp .ag-tag{color:var(--neon2);border-color:rgba(255,62,127,0.3);}
+.cl .ag-tag{color:var(--neon3);border-color:rgba(160,255,0,0.3);}
+.cg .ag-tag{color:var(--gold);border-color:rgba(255,209,102,0.3);}
+.ag-title{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:700;color:var(--bright);margin-bottom:18px;}
+.ag-list{list-style:none;}
+.ag-list li{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,200,255,0.05);font-size:13px;color:var(--text);line-height:1.5;}
+.ag-list li:last-child{border-bottom:none;}
+.ag-list li::before{content:'//';color:var(--neon);font-size:10px;font-family:'Orbitron',sans-serif;flex-shrink:0;margin-top:2px;opacity:0.6;}
+.big-num{position:absolute;bottom:-10px;right:4px;font-family:'Orbitron',sans-serif;font-size:100px;font-weight:900;color:rgba(0,200,255,0.03);pointer-events:none;line-height:1;}
+
+/* TERMINAL */
+.terminal-new{border:1px solid var(--rim);overflow:hidden;margin-bottom:80px;}
+.t-header{background:rgba(0,200,255,0.06);border-bottom:1px solid var(--rim);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;}
+.t-title{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;color:var(--neon);}
+.t-controls{display:flex;gap:8px;}
+.t-ctrl{width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);}
+.t-ctrl:nth-child(1){background:#ff5f57;}.t-ctrl:nth-child(2){background:#febc2e;}.t-ctrl:nth-child(3){background:#28c840;}
+.t-body{padding:24px 28px;font-family:'Rajdhani',monospace;font-size:13px;line-height:2;background:var(--deep);}
+.t-sep{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:4px;color:var(--muted);margin:6px 0;border-bottom:1px solid rgba(0,200,255,0.06);padding-bottom:8px;}
+.tl{display:flex;gap:10px;}
+.tp{color:var(--neon);font-weight:600;flex-shrink:0;}
+.tc{color:var(--bright);font-weight:500;}
+.to{color:var(--muted);}
+.tok{color:var(--neon3);font-weight:600;}
+.cursor{display:inline-block;width:9px;height:16px;background:var(--neon);animation:cblink 1s infinite;vertical-align:middle;box-shadow:0 0 8px var(--neon);}
+@keyframes cblink{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+/* FLOW TABS */
+.flow-grid{display:grid;grid-template-columns:180px 1fr;gap:2px;}
+.flow-left{display:flex;flex-direction:column;gap:2px;}
+.flow-right{background:var(--panel);border:1px solid var(--rim);padding:32px;display:flex;flex-direction:column;justify-content:center;}
+.flow-tab{padding:18px 20px;background:var(--panel);border:1px solid var(--rim);cursor:pointer;transition:all 0.2s;border-left:3px solid transparent;}
+.flow-tab:hover{border-left-color:var(--muted);background:rgba(0,200,255,0.03);}
+.flow-tab.active{border-left-color:var(--neon);background:rgba(0,200,255,0.06);}
+.flow-tab-num{font-family:'Orbitron',sans-serif;font-size:8px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;}
+.flow-tab-name{font-size:13px;font-weight:600;color:var(--bright);}
+.flow-content-title{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:var(--bright);margin-bottom:8px;}
+.flow-content-desc{font-size:15px;color:var(--muted);line-height:1.7;margin-bottom:24px;}
+.fcs{display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(0,200,255,0.04);border:1px solid rgba(0,200,255,0.08);margin-bottom:6px;}
+.fcs-num{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--neon);width:24px;flex-shrink:0;}
+.fcs-text{font-size:13px;color:var(--text);}
+
+footer{text-align:center;padding:32px;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:5px;color:var(--muted);border-top:1px solid rgba(0,200,255,0.08);}
+</style>
+</head>
+<body><div class="wrap">
+
+<section class="hero">
+  <div class="ring"></div><div class="ring ring-2"></div>
+  <div class="hero-eyebrow">LABORATORY 07 // 5 MARKS</div>
+  <h1><span class="line1">CI/CD</span><span class="line2">PIPELINE</span></h1>
+  <p class="hero-sub">Deploy Dockerized applications on Kubernetes using Jenkins — fully automated, zero-touch, end-to-end delivery from commit to cluster.</p>
+  <div class="tech-row">
+    <div class="tech-pill tp-j"><span class="tp-dot"></span>JENKINS 2.X</div>
+    <div class="tech-pill tp-d"><span class="tp-dot"></span>DOCKER 24</div>
+    <div class="tech-pill tp-k"><span class="tp-dot"></span>KUBERNETES 1.29</div>
+  </div>
+</section>
+
+<div class="section">
+  <div class="sec-label">// PIPELINE ARCHITECTURE</div>
+  <div class="sec-title">Five-Stage Delivery Pipeline</div>
+
+  <div class="hex-pipeline">
+    <div class="hex-wrap">
+      <div class="hex" onclick="showTab(0)">
+        <svg viewBox="0 0 110 126"><polygon points="55,4 106,31 106,95 55,122 4,95 4,31" fill="rgba(0,200,255,0.06)" stroke="rgba(0,200,255,0.3)" stroke-width="1.5"/></svg>
+        <div class="hex-content"><div class="hex-icon">📥</div><div class="hex-num">01</div><div class="hex-name">Source Checkout</div></div>
+      </div><div class="hex-connector"></div>
+    </div>
+    <div class="hex-wrap">
+      <div class="hex" onclick="showTab(1)">
+        <svg viewBox="0 0 110 126"><polygon points="55,4 106,31 106,95 55,122 4,95 4,31" fill="rgba(255,62,127,0.06)" stroke="rgba(255,62,127,0.3)" stroke-width="1.5"/></svg>
+        <div class="hex-content"><div class="hex-icon">🔬</div><div class="hex-num">02</div><div class="hex-name">Build &amp; Test</div></div>
+      </div><div class="hex-connector"></div>
+    </div>
+    <div class="hex-wrap">
+      <div class="hex" onclick="showTab(2)">
+        <svg viewBox="0 0 110 126"><polygon points="55,4 106,31 106,95 55,122 4,95 4,31" fill="rgba(0,200,255,0.06)" stroke="rgba(0,200,255,0.3)" stroke-width="1.5"/></svg>
+        <div class="hex-content"><div class="hex-icon">🐳</div><div class="hex-num">03</div><div class="hex-name">Docker Build</div></div>
+      </div><div class="hex-connector"></div>
+    </div>
+    <div class="hex-wrap">
+      <div class="hex" onclick="showTab(3)">
+        <svg viewBox="0 0 110 126"><polygon points="55,4 106,31 106,95 55,122 4,95 4,31" fill="rgba(160,255,0,0.06)" stroke="rgba(160,255,0,0.3)" stroke-width="1.5"/></svg>
+        <div class="hex-content"><div class="hex-icon">📤</div><div class="hex-num">04</div><div class="hex-name">Push Registry</div></div>
+      </div><div class="hex-connector"></div>
+    </div>
+    <div class="hex-wrap">
+      <div class="hex" onclick="showTab(4)">
+        <svg viewBox="0 0 110 126"><polygon points="55,4 106,31 106,95 55,122 4,95 4,31" fill="rgba(255,209,102,0.06)" stroke="rgba(255,209,102,0.3)" stroke-width="1.5"/></svg>
+        <div class="hex-content"><div class="hex-icon">🚀</div><div class="hex-num">05</div><div class="hex-name">K8s Deploy</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="ag-card cn row2">
+      <div class="ag-tag">JENKINS</div>
+      <div class="ag-title">Automation Server</div>
+      <ul class="ag-list">
+        <li>Webhook triggers on git push event</li>
+        <li>Declarative Jenkinsfile pipeline-as-code</li>
+        <li>Parallel test execution across agents</li>
+        <li>SonarQube quality gate enforcement</li>
+        <li>Shared library for reusable steps</li>
+        <li>Slack/email alert on failure</li>
+      </ul>
+      <div class="big-num">01</div>
+    </div>
+    <div class="ag-card cp">
+      <div class="ag-tag">DOCKER</div>
+      <div class="ag-title">Container Build</div>
+      <ul class="ag-list">
+        <li>Multi-stage Dockerfile minimizes size</li>
+        <li>Secrets injected at build-time only</li>
+        <li>Trivy CVE scan before push</li>
+      </ul>
+      <div class="big-num">02</div>
+    </div>
+    <div class="ag-card cl">
+      <div class="ag-tag">REGISTRY</div>
+      <div class="ag-title">Image Management</div>
+      <ul class="ag-list">
+        <li>SHA + build-number tag strategy</li>
+        <li>Image signing via cosign</li>
+        <li>Retention policy for old images</li>
+      </ul>
+      <div class="big-num">03</div>
+    </div>
+    <div class="ag-card cg span2">
+      <div class="ag-tag">KUBERNETES</div>
+      <div class="ag-title">Cluster Deployment — Rolling Update</div>
+      <ul class="ag-list" style="columns:2;gap:40px;">
+        <li>kubectl apply from updated manifest</li>
+        <li>maxUnavailable: 0 — zero downtime</li>
+        <li>Readiness probe gates traffic shift</li>
+        <li>HPA auto-scales on CPU above 70%</li>
+        <li>Rollback on failed health check</li>
+        <li>Namespace isolation per environment</li>
+      </ul>
+      <div class="big-num">05</div>
+    </div>
+  </div>
+
+  <div class="sec-label">// CONSOLE OUTPUT</div>
+  <div class="sec-title" style="margin-bottom:24px;">Build #47 — Live Log</div>
+  <div class="terminal-new">
+    <div class="t-header">
+      <span class="t-title">JENKINS CONSOLE — BUILD #47 — MAIN BRANCH</span>
+      <div class="t-controls"><div class="t-ctrl"></div><div class="t-ctrl"></div><div class="t-ctrl"></div></div>
+    </div>
+    <div class="t-body" id="tbody">
+      <div class="t-sep">STAGE 01 — SOURCE CHECKOUT</div>
+      <div class="tl"><span class="tp">»</span><span class="tc">git clone https://github.com/org/app.git && cd app</span></div>
+      <div class="tl"><span class="to">Cloning... Receiving objects: 100% (1832/1832) done.</span></div>
+      <div class="tl"><span class="tok">✔ Checkout complete — commit abc3f91</span></div>
+      <br>
+      <div class="t-sep">STAGE 02 — BUILD &amp; TEST</div>
+      <div class="tl"><span class="tp">»</span><span class="tc">mvn clean package -DskipTests=false -Pci</span></div>
+      <div class="tl"><span class="to">Tests run: 84, Failures: 0, Errors: 0 — Time: 41.2s</span></div>
+      <div class="tl"><span class="tok">✔ SonarQube gate: PASSED (coverage 87%)</span></div>
+      <br>
+      <div class="t-sep">STAGE 03 — DOCKER BUILD</div>
+      <div class="tl"><span class="tp">»</span><span class="tc">docker build --build-arg VERSION=1.4.7 -t app:1.4.7-abc3f91 .</span></div>
+      <div class="tl"><span class="to">Step 14/14 — Successfully built 8f3a91c2 (148MB)</span></div>
+      <div class="tl"><span class="tok">✔ Trivy: 0 CRITICAL  0 HIGH  2 LOW (accepted)</span></div>
+      <br>
+      <div class="t-sep">STAGE 04 — PUSH REGISTRY</div>
+      <div class="tl"><span class="tp">»</span><span class="tc">docker push registry.io/org/app:1.4.7-abc3f91 && cosign sign</span></div>
+      <div class="tl"><span class="tok">✔ Image pushed  ✔ Signature verified</span></div>
+      <br>
+      <div class="t-sep">STAGE 05 — KUBERNETES DEPLOY</div>
+      <div class="tl"><span class="tp">»</span><span class="tc">kubectl set image deployment/app app=registry.io/org/app:1.4.7-abc3f91 -n prod</span></div>
+      <div class="tl"><span class="tp">»</span><span class="tc">kubectl rollout status deployment/app -n prod --timeout=5m</span></div>
+      <div class="tl"><span class="tok">✔ Rollout complete — 3/3 pods Running — Total: 4m 22s</span></div>
+      <div>&nbsp;</div><div><span class="cursor"></span></div>
+    </div>
+  </div>
+
+  <div class="sec-label">// STAGE DETAILS</div>
+  <div class="sec-title" style="margin-bottom:24px;">Interactive Stage Reference</div>
+  <div class="flow-grid">
+    <div class="flow-left" id="flowTabs">
+      <div class="flow-tab active" onclick="showTab(0)"><div class="flow-tab-num">01</div><div class="flow-tab-name">Source Checkout</div></div>
+      <div class="flow-tab" onclick="showTab(1)"><div class="flow-tab-num">02</div><div class="flow-tab-name">Build &amp; Test</div></div>
+      <div class="flow-tab" onclick="showTab(2)"><div class="flow-tab-num">03</div><div class="flow-tab-name">Docker Build</div></div>
+      <div class="flow-tab" onclick="showTab(3)"><div class="flow-tab-num">04</div><div class="flow-tab-name">Push Registry</div></div>
+      <div class="flow-tab" onclick="showTab(4)"><div class="flow-tab-num">05</div><div class="flow-tab-name">K8s Deploy</div></div>
+    </div>
+    <div class="flow-right" id="flowContent">
+      <div class="flow-content-title">Source Checkout</div>
+      <div class="flow-content-desc">Jenkins receives webhook from Git, fetches latest commit, and sets build metadata for the pipeline run.</div>
+      <div class="fcs"><span class="fcs-num">01</span><span class="fcs-text">Webhook from GitHub fires Jenkins job</span></div>
+      <div class="fcs"><span class="fcs-num">02</span><span class="fcs-text">SCM plugin clones repository with credentials</span></div>
+      <div class="fcs"><span class="fcs-num">03</span><span class="fcs-text">Jenkinsfile parsed, stages mapped to agents</span></div>
+      <div class="fcs"><span class="fcs-num">04</span><span class="fcs-text">Build metadata (commit SHA, branch) injected</span></div>
+    </div>
+  </div>
+</div>
+
+<footer>CI/CD PIPELINE &nbsp;//&nbsp; JENKINS · DOCKER · KUBERNETES &nbsp;//&nbsp; LAB 07</footer>
+</div>
+<script>
+const tabData=[
+  {title:"Source Checkout",desc:"Jenkins receives webhook from Git, fetches latest commit, sets build metadata for the pipeline run.",steps:["Webhook from GitHub fires Jenkins job","SCM plugin clones repo with credentials","Jenkinsfile parsed, stages mapped to agents","Build metadata (commit SHA, branch) injected"]},
+  {title:"Build & Test",desc:"Maven/Gradle compiles source, runs unit and integration tests, SonarQube enforces quality gate.",steps:["Compile source code via Maven/Gradle","Unit tests run in parallel across agents","Integration tests against test database","SonarQube gate must pass before proceeding"]},
+  {title:"Docker Build",desc:"Multi-stage Dockerfile builds a minimal production image. Trivy scans for known CVEs before tagging.",steps:["Multi-stage build: builder + runtime stages","Copy only compiled artifact into final image","Tag with version + commit SHA for traceability","Trivy scans: block if CRITICAL/HIGH CVE found"]},
+  {title:"Push Registry",desc:"Tagged image is pushed to the container registry. cosign signs the image digest for supply-chain integrity.",steps:["Authenticate to registry via Jenkins credentials","docker push with version + SHA tag","cosign signs image digest with private key","Registry webhook notifies downstream systems"]},
+  {title:"K8s Deploy",desc:"kubectl updates the Deployment image. Kubernetes performs rolling update with zero downtime.",steps:["kubectl set image updates Deployment spec","Rolling update: one pod at a time replaced","Readiness probe must pass before pod is live","Rollback triggered automatically on failure"]}
+];
+function showTab(idx){
+  document.querySelectorAll('.flow-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  const d=tabData[idx];
+  document.getElementById('flowContent').innerHTML=`<div class="flow-content-title">${d.title}</div><div class="flow-content-desc">${d.desc}</div>${d.steps.map((s,i)=>`<div class="fcs"><span class="fcs-num">0${i+1}</span><span class="fcs-text">${s}</span></div>`).join('')}`;
+}
+document.querySelectorAll('#tbody > *').forEach((el,i)=>{el.style.opacity='0';setTimeout(()=>{el.style.opacity='1';el.style.transition='opacity 0.3s';},i*80);});
+</script>
+</body></html>
