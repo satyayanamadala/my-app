@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Blue-Green Deployment — Jenkins · Kubernetes · Docker</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Familjen+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #04080f;
+  --surface: #080f1a;
+  --card: #0d1a2a;
+  --border: #152233;
+  --blue: #1e90ff;
+  --blue-dim: rgba(30,144,255,0.12);
+  --green: #00e676;
+  --green-dim: rgba(0,230,118,0.12);
+  --amber: #ffc107;
+  --red: #ff5252;
+  --text: #c9dcea;
+  --muted: #4a7a9b;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Familjen Grotesk', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.75; overflow-x: hidden; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+
+/* ── GRID BACKGROUND ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(30,144,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,144,255,.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none; z-index: 0;
+}
+
+/* ── SIDEBAR ── */
+#sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0; width: 260px;
+  background: rgba(8,15,26,0.97);
+  border-right: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  z-index: 100;
+  display: flex; flex-direction: column;
+  transition: transform .3s ease;
+}
+
+.sb-header {
+  padding: 1.75rem 1.5rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sb-eyebrow {
+  font-family: var(--mono);
+  font-size: .6rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: .5rem;
+}
+
+.sb-title {
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.sb-badges {
+  display: flex; gap: .4rem; flex-wrap: wrap;
+  margin-top: .75rem;
+}
+
+.badge {
+  font-family: var(--mono);
+  font-size: .58rem;
+  padding: .2rem .55rem;
+  border-radius: 3px;
+  border: 1px solid;
+  letter-spacing: .05em;
+}
+
+.badge-blue { color: var(--blue); border-color: rgba(30,144,255,.4); background: var(--blue-dim); }
+.badge-green { color: var(--green); border-color: rgba(0,230,118,.4); background: var(--green-dim); }
+.badge-amber { color: var(--amber); border-color: rgba(255,193,7,.3); background: rgba(255,193,7,.08); }
+
+#nav { flex: 1; overflow-y: auto; padding: .75rem .75rem; }
+
+.nav-group { margin-bottom: .25rem; }
+
+.nav-label {
+  font-family: var(--mono);
+  font-size: .58rem;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--muted);
+  padding: .6rem .75rem .2rem;
+}
+
+#nav a {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .48rem .75rem;
+  border-radius: 5px;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: .82rem;
+  font-weight: 600;
+  transition: all .18s;
+  border: 1px solid transparent;
+}
+
+#nav a:hover { color: var(--text); background: rgba(30,144,255,.07); }
+#nav a.active { color: var(--blue); background: var(--blue-dim); border-color: rgba(30,144,255,.2); }
+#nav a .ico { font-size: .7rem; width: 16px; text-align: center; }
+
+.sb-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: .58rem;
+  color: var(--muted);
+}
+
+/* ── MAIN ── */
+main { margin-left: 260px; position: relative; z-index: 1; }
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  padding: 5rem 3rem 4rem;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 480px; height: 480px;
+  background: radial-gradient(circle, rgba(30,144,255,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-kicker {
+  font-family: var(--mono);
+  font-size: .7rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 1rem;
+  display: flex; align-items: center; gap: .6rem;
+}
+
+.hero-kicker::before {
+  content: '';
+  display: inline-block;
+  width: 28px; height: 2px;
+  background: var(--blue);
+}
+
+.hero h1 {
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+  margin-bottom: 1.25rem;
+  letter-spacing: -.02em;
+}
+
+.hero h1 .accent-blue { color: var(--blue); }
+.hero h1 .accent-green { color: var(--green); }
+
+.hero-desc {
+  max-width: 640px;
+  font-size: 1rem;
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.hero-stats {
+  display: flex; gap: 2rem; flex-wrap: wrap;
+}
+
+.stat {
+  display: flex; flex-direction: column;
+}
+
+.stat-num {
+  font-family: var(--mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: .75rem;
+  color: var(--muted);
+  margin-top: .2rem;
+}
+
+/* ── SECTION ── */
+.section { padding: 3.5rem 3rem; border-bottom: 1px solid var(--border); }
+.section:last-child { border-bottom: none; }
+
+.section-tag {
+  font-family: var(--mono);
+  font-size: .62rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: .6rem;
+}
+
+.section h2 {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 1rem;
+  letter-spacing: -.01em;
+}
+
+.section h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--blue);
+  margin: 1.5rem 0 .6rem;
+}
+
+.section p { color: var(--text); margin-bottom: .85rem; max-width: 780px; }
+
+/* ── CONCEPT DIAGRAM ── */
+.bg-diagram {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  gap: 0;
+  align-items: center;
+  margin: 2rem 0;
+  max-width: 860px;
+}
+
+.env-box {
+  border: 2px solid;
+  border-radius: 10px;
+  padding: 1.5rem;
+  position: relative;
+}
+
+.env-box.blue-env {
+  border-color: rgba(30,144,255,.5);
+  background: linear-gradient(135deg, rgba(30,144,255,.08), rgba(30,144,255,.03));
+}
+
+.env-box.green-env {
+  border-color: rgba(0,230,118,.5);
+  background: linear-gradient(135deg, rgba(0,230,118,.08), rgba(0,230,118,.03));
+}
+
+.env-label {
+  font-family: var(--mono);
+  font-size: .65rem;
+  text-transform: uppercase;
+  letter-spacing: .15em;
+  margin-bottom: .5rem;
+}
+
+.blue-env .env-label { color: var(--blue); }
+.green-env .env-label { color: var(--green); }
+
+.env-box h4 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: .75rem; }
+
+.env-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: .6rem;
+  padding: .2rem .6rem;
+  border-radius: 3px;
+  margin-bottom: .4rem;
+}
+
+.live-tag { background: rgba(0,230,118,.18); color: var(--green); border: 1px solid rgba(0,230,118,.3); }
+.idle-tag { background: rgba(30,144,255,.15); color: var(--blue); border: 1px solid rgba(30,144,255,.3); }
+.deploy-tag { background: rgba(255,193,7,.12); color: var(--amber); border: 1px solid rgba(255,193,7,.3); }
+
+.arrow-col {
+  display: flex; flex-direction: column; align-items: center; gap: .3rem;
+}
+
+.arrow-label {
+  font-family: var(--mono);
+  font-size: .6rem;
+  color: var(--amber);
+  text-align: center;
+  letter-spacing: .08em;
+}
+
+.arrow-svg { color: var(--amber); }
+
+/* ── CARDS GRID ── */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.4rem;
+  transition: border-color .2s, transform .2s;
+}
+
+.card:hover { border-color: var(--blue); transform: translateY(-2px); }
+
+.card-icon { font-size: 1.4rem; margin-bottom: .6rem; }
+
+.card h4 {
+  font-size: .95rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: .4rem;
+}
+
+.card p { font-size: .83rem; color: var(--muted); line-height: 1.6; margin: 0; }
+
+/* ── CODE BLOCK ── */
+.code-wrap {
+  background: #020810;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1.25rem 0;
+  max-width: 860px;
+}
+
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .6rem 1rem;
+  background: rgba(255,255,255,.03);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-filename {
+  font-family: var(--mono);
+  font-size: .68rem;
+  color: var(--muted);
+}
+
+.code-dots { display: flex; gap: .4rem; }
+.code-dots span { width: 10px; height: 10px; border-radius: 50%; }
+.d1 { background: #ff5f57; }
+.d2 { background: #febc2e; }
+.d3 { background: #28c840; }
+
+.code-copy {
+  font-family: var(--mono);
+  font-size: .6rem;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: .2rem .5rem;
+  cursor: pointer;
+  transition: all .18s;
+}
+
+.code-copy:hover { color: var(--green); border-color: var(--green); }
+
+pre {
+  padding: 1.2rem 1.25rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: .78rem;
+  line-height: 1.8;
+  color: #8eb8d4;
+}
+
+.kw { color: #569cd6; }
+.fn { color: var(--green); }
+.str { color: #ce9178; }
+.cmt { color: #4a7a9b; font-style: italic; }
+.num { color: var(--amber); }
+.tag-hl { color: #4ec9b0; }
+.op { color: #c586c0; }
+
+/* ── PIPELINE ── */
+.pipeline {
+  display: flex; align-items: center; gap: 0;
+  overflow-x: auto;
+  padding: 1.5rem 0;
+  margin: 1rem 0;
+}
+
+.pipe-step {
+  flex-shrink: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .9rem 1rem;
+  width: 130px;
+  text-align: center;
+  position: relative;
+  transition: border-color .2s;
+}
+
+.pipe-step:hover { border-color: var(--blue); }
+
+.pipe-step .p-num {
+  font-family: var(--mono);
+  font-size: .6rem;
+  color: var(--muted);
+  margin-bottom: .3rem;
+}
+
+.pipe-step .p-icon { font-size: 1.3rem; margin-bottom: .3rem; }
+
+.pipe-step .p-label {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.pipe-step .p-sub {
+  font-family: var(--mono);
+  font-size: .58rem;
+  color: var(--muted);
+  margin-top: .2rem;
+}
+
+.pipe-arrow {
+  flex-shrink: 0;
+  color: var(--border);
+  font-size: 1.1rem;
+  padding: 0 .25rem;
+}
+
+/* ── TRAFFIC SWITCH VISUAL ── */
+.traffic-visual {
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  max-width: 500px;
+  margin: 1.5rem 0;
+}
+
+.traffic-lb {
+  background: var(--card);
+  border: 2px solid var(--amber);
+  border-radius: 8px;
+  padding: .8rem 2rem;
+  font-family: var(--mono);
+  font-size: .75rem;
+  color: var(--amber);
+  text-align: center;
+  width: 200px;
+}
+
+.traffic-split { display: flex; gap: 3rem; align-items: flex-start; }
+
+.traffic-env {
+  display: flex; flex-direction: column; align-items: center; gap: .4rem;
+}
+
+.traffic-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: .2rem; }
+
+.traffic-bar {
+  width: 80px; height: 140px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  overflow: hidden;
+  position: relative;
+}
+
+.traffic-fill {
+  width: 100%;
+  border-radius: 2px;
+  transition: height .8s ease;
+  position: relative;
+}
+
+.traffic-fill::after {
+  content: attr(data-pct);
+  position: absolute;
+  top: -1.4rem;
+  left: 50%; transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: .65rem;
+  white-space: nowrap;
+}
+
+.fill-blue { background: linear-gradient(to top, var(--blue), rgba(30,144,255,.4)); }
+.fill-blue::after { color: var(--blue); }
+.fill-green { background: linear-gradient(to top, var(--green), rgba(0,230,118,.4)); }
+.fill-green::after { color: var(--green); }
+
+.traffic-name { font-family: var(--mono); font-size: .65rem; text-align: center; }
+.traffic-name.tn-blue { color: var(--blue); }
+.traffic-name.tn-green { color: var(--green); }
+
+.traffic-controls { display: flex; gap: .75rem; flex-wrap: wrap; }
+
+.tc-btn {
+  font-family: var(--mono);
+  font-size: .68rem;
+  padding: .4rem .9rem;
+  border-radius: 5px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all .18s;
+  background: none;
+}
+
+.tc-btn.tb { color: var(--blue); border-color: rgba(30,144,255,.4); }
+.tc-btn.tb:hover { background: var(--blue-dim); }
+.tc-btn.tg { color: var(--green); border-color: rgba(0,230,118,.4); }
+.tc-btn.tg:hover { background: var(--green-dim); }
+.tc-btn.tr { color: var(--red); border-color: rgba(255,82,82,.4); }
+.tc-btn.tr:hover { background: rgba(255,82,82,.1); }
+
+/* ── STEPS LIST ── */
+.steps { counter-reset: step; display: flex; flex-direction: column; gap: .75rem; margin: 1rem 0; max-width: 780px; }
+
+.step-item {
+  display: flex; gap: 1rem; align-items: flex-start;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  transition: border-color .18s;
+}
+
+.step-item:hover { border-color: var(--green); }
+
+.step-num {
+  counter-increment: step;
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  background: var(--green-dim);
+  border: 1px solid rgba(0,230,118,.3);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: .65rem;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.step-body h5 { font-size: .9rem; font-weight: 700; color: #fff; margin-bottom: .25rem; }
+.step-body p { font-size: .82rem; color: var(--muted); margin: 0; }
+
+/* ── TABLE ── */
+.tbl-wrap { overflow-x: auto; margin: 1.25rem 0; max-width: 860px; }
+
+table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+
+thead tr { border-bottom: 2px solid var(--blue); }
+th { padding: .7rem 1rem; text-align: left; font-family: var(--mono); font-size: .65rem; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); }
+td { padding: .65rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(30,144,255,.04); }
+
+/* ── ALERTS ── */
+.alert {
+  display: flex; gap: .75rem;
+  padding: .9rem 1.1rem;
+  border-radius: 7px;
+  margin: 1rem 0;
+  border-left: 3px solid;
+  font-size: .85rem;
+  max-width: 780px;
+}
+
+.alert-icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
+.alert-body strong { display: block; margin-bottom: .2rem; font-size: .82rem; }
+.alert-body p { margin: 0; font-size: .8rem; line-height: 1.55; }
+
+.alert-info { background: rgba(30,144,255,.08); border-color: var(--blue); }
+.alert-info .alert-icon { color: var(--blue); }
+.alert-info strong { color: var(--blue); }
+.alert-info p { color: var(--muted); }
+
+.alert-success { background: rgba(0,230,118,.07); border-color: var(--green); }
+.alert-success .alert-icon { color: var(--green); }
+.alert-success strong { color: var(--green); }
+.alert-success p { color: var(--muted); }
+
+.alert-warning { background: rgba(255,193,7,.07); border-color: var(--amber); }
+.alert-warning .alert-icon { color: var(--amber); }
+.alert-warning strong { color: var(--amber); }
+.alert-warning p { color: var(--muted); }
+
+/* ── ROLLBACK ── */
+.rollback-flow {
+  display: flex; align-items: center; gap: .75rem;
+  flex-wrap: wrap;
+  margin: 1.25rem 0;
+}
+
+.rb-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: .7rem 1.1rem;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  min-width: 120px;
+}
+
+.rb-box.rb-trigger { border-color: var(--red); color: var(--red); background: rgba(255,82,82,.07); }
+.rb-box.rb-action { border-color: var(--amber); color: var(--amber); background: rgba(255,193,7,.07); }
+.rb-box.rb-done { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+.rb-arrow { color: var(--border); font-size: 1.1rem; }
+
+/* ── TOC PROGRESS ── */
+#progress-bar {
+  position: fixed; top: 0; left: 260px; right: 0; height: 3px;
+  background: transparent; z-index: 200;
+}
+
+#progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+  width: 0%;
+  transition: width .1s linear;
+}
+
+/* ── MOBILE TOGGLE ── */
+#menu-btn {
+  display: none;
+  position: fixed; top: 1rem; right: 1rem;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 38px; height: 38px;
+  cursor: pointer;
+  align-items: center; justify-content: center;
+  font-size: 1.1rem; color: var(--text);
+}
+
+@media (max-width: 768px) {
+  #sidebar { transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  main { margin-left: 0; }
+  #menu-btn { display: flex; }
+  #progress-bar { left: 0; }
+  .hero { padding: 4rem 1.5rem 2.5rem; }
+  .section { padding: 2.5rem 1.5rem; }
+  .bg-diagram { grid-template-columns: 1fr; }
+  .arrow-col { display: none; }
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-kicker, .hero h1, .hero-desc, .hero-stats { animation: fadeUp .6s ease both; }
+.hero h1 { animation-delay: .1s; }
+.hero-desc { animation-delay: .2s; }
+.hero-stats { animation-delay: .3s; }
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+.live-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-right: .4rem;
+  animation: pulseDot 1.8s ease infinite;
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"><div id="progress-fill"></div></div>
+<button id="menu-btn" onclick="toggleSidebar()">☰</button>
+
+<!-- ── SIDEBAR ── -->
+<aside id="sidebar">
+  <div class="sb-header">
+    <div class="sb-eyebrow">DevOps Strategy</div>
+    <div class="sb-title">Blue-Green<br/>Deployment</div>
+    <div class="sb-badges">
+      <span class="badge badge-blue">Jenkins</span>
+      <span class="badge badge-green">Kubernetes</span>
+      <span class="badge badge-amber">Docker</span>
+    </div>
+  </div>
+  <nav id="nav">
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a href="#concept" class="active"><span class="ico">◈</span> Concept</a>
+      <a href="#benefits"><span class="ico">◇</span> Benefits</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Infrastructure</div>
+      <a href="#docker"><span class="ico">🐳</span> Docker Setup</a>
+      <a href="#kubernetes"><span class="ico">☸</span> Kubernetes</a>
+      <a href="#traffic"><span class="ico">⇄</span> Traffic Switching</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">CI/CD Pipeline</div>
+      <a href="#jenkins"><span class="ico">⚙</span> Jenkins Pipeline</a>
+      <a href="#stages"><span class="ico">▷</span> Pipeline Stages</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Operations</div>
+      <a href="#rollback"><span class="ico">↩</span> Rollback Strategy</a>
+      <a href="#monitoring"><span class="ico">◎</span> Monitoring</a>
+      <a href="#best-practices"><span class="ico">✦</span> Best Practices</a>
+    </div>
+  </nav>
+  <div class="sb-footer">v2.4 · Zero-Downtime Deployments</div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-kicker">Automated Deployment Architecture</div>
+    <h1>
+      <span class="accent-blue">Blue-Green</span><br/>
+      <span class="accent-green">Deployment</span> Strategy
+    </h1>
+    <p class="hero-desc">
+      Eliminate downtime with parallel environment deployment. Route 100% traffic instantly between
+      Blue (live) and Green (staged) environments using Jenkins pipelines, Kubernetes orchestration, and Docker containers.
+    </p>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num">0s</span><span class="stat-label">Downtime Target</span></div>
+      <div class="stat"><span class="stat-num">&lt;5s</span><span class="stat-label">Traffic Switch</span></div>
+      <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Instant Rollback</span></div>
+      <div class="stat"><span class="stat-num">3</span><span class="stat-label">Core Technologies</span></div>
+    </div>
+  </section>
+
+  <!-- CONCEPT -->
+  <section class="section" id="concept">
+    <div class="section-tag">01 — Overview</div>
+    <h2>What is Blue-Green Deployment?</h2>
+    <p>
+      Blue-Green deployment is a release technique that reduces downtime and risk by running two identical production environments.
+      At any time, only one environment (say, Blue) serves live traffic while the other (Green) is idle, available for the new release.
+    </p>
+    <p>
+      Once deployment and smoke testing on Green succeeds, the load balancer instantly flips all traffic to Green.
+      Blue then becomes the new staging environment. Rollback is a single DNS/LB switch.
+    </p>
+
+    <div class="bg-diagram">
+      <div class="env-box blue-env">
+        <div class="env-label">Environment A</div>
+        <h4>🔵 Blue</h4>
+        <span class="env-tag live-tag"><span class="live-dot"></span>LIVE — v1.4.2</span>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem">
+          Serves 100% production traffic.<br/>
+          Pods: 3 replicas running.<br/>
+          Stable — current release.
+        </p>
+      </div>
+      <div class="arrow-col">
+        <div class="arrow-label">SWITCH<br/>TRAFFIC</div>
+        <svg class="arrow-svg" width="40" height="24" viewBox="0 0 40 24">
+          <line x1="0" y1="12" x2="32" y2="12" stroke="currentColor" stroke-width="2"/>
+          <polyline points="26,6 34,12 26,18" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="env-box green-env">
+        <div class="env-label">Environment B</div>
+        <h4>🟢 Green</h4>
+        <span class="env-tag deploy-tag">STAGING — v1.5.0</span>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:.5rem">
+          New version deployed here.<br/>
+          Pods: 3 replicas ready.<br/>
+          Smoke tests passing ✓
+        </p>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <span class="alert-icon">ℹ</span>
+      <div class="alert-body">
+        <strong>Key Principle</strong>
+        <p>Both environments are identical in infrastructure. The ONLY difference is the application version running. This parity is enforced through Docker images and Kubernetes manifests stored in version control.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENEFITS -->
+  <section class="section" id="benefits">
+    <div class="section-tag">02 — Benefits</div>
+    <h2>Why Blue-Green?</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h4>Zero Downtime</h4>
+        <p>Traffic switchover happens at the load balancer level in milliseconds. Users experience no interruption during deployments.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">↩</div>
+        <h4>Instant Rollback</h4>
+        <p>If issues arise post-deployment, flipping traffic back to the Blue environment takes under 5 seconds — no re-deployment needed.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧪</div>
+        <h4>Full Production Testing</h4>
+        <p>Green environment runs on real production infrastructure before receiving live traffic. Test with production data via read-only access.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h4>Reduced Risk</h4>
+        <p>New releases are validated in an identical environment. The old version remains untouched until confidence is established.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔄</div>
+        <h4>Consistent Releases</h4>
+        <p>The same automated pipeline is used for every release, eliminating manual steps and human error in the deployment process.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h4>Clear Audit Trail</h4>
+        <p>Jenkins pipeline logs, Docker image tags, and Kubernetes deployment history provide full traceability for compliance.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOCKER -->
+  <section class="section" id="docker">
+    <div class="section-tag">03 — Infrastructure</div>
+    <h2>Docker Configuration</h2>
+    <p>
+      Each application is containerized using Docker. Images are tagged with Git commit SHAs and semantic version labels,
+      ensuring immutable, reproducible builds. Multi-stage builds reduce image size and eliminate build-time dependencies from runtime.
+    </p>
+
+    <h3>Production Dockerfile</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">Dockerfile</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cmt"># ── Stage 1: Build ──────────────────────────────────────</span>
+<span class="kw">FROM</span> <span class="fn">node:18-alpine</span> <span class="kw">AS</span> builder
+<span class="kw">WORKDIR</span> /app
+
+<span class="cmt"># Install dependencies first (layer cache optimization)</span>
+<span class="kw">COPY</span> package*.json ./
+<span class="kw">RUN</span> npm ci <span class="op">--</span>only=production
+
+<span class="kw">COPY</span> . .
+<span class="kw">RUN</span> npm run build
+
+<span class="cmt"># ── Stage 2: Runtime ─────────────────────────────────────</span>
+<span class="kw">FROM</span> <span class="fn">node:18-alpine</span> <span class="kw">AS</span> runtime
+<span class="kw">WORKDIR</span> /app
+
+<span class="cmt"># Security: run as non-root user</span>
+<span class="kw">RUN</span> addgroup <span class="op">-S</span> appgroup &amp;&amp; adduser <span class="op">-S</span> appuser <span class="op">-G</span> appgroup
+<span class="kw">USER</span> appuser
+
+<span class="kw">COPY</span> <span class="op">--from=</span>builder /app/dist ./dist
+<span class="kw">COPY</span> <span class="op">--from=</span>builder /app/node_modules ./node_modules
+
+<span class="cmt"># Labels for traceability</span>
+<span class="kw">LABEL</span> maintainer=<span class="str">"devops@company.com"</span>
+<span class="kw">LABEL</span> version=<span class="str">"${BUILD_VERSION}"</span>
+<span class="kw">LABEL</span> git-commit=<span class="str">"${GIT_COMMIT}"</span>
+
+<span class="kw">EXPOSE</span> <span class="num">3000</span>
+<span class="kw">HEALTHCHECK</span> <span class="op">--interval=</span><span class="num">30</span>s <span class="op">--timeout=</span><span class="num">10</span>s <span class="op">--retries=</span><span class="num">3</span> \
+  <span class="kw">CMD</span> wget <span class="op">-qO-</span> http://localhost:<span class="num">3000</span>/health || exit <span class="num">1</span>
+
+<span class="kw">CMD</span> [<span class="str">"node"</span>, <span class="str">"dist/server.js"</span>]</pre>
+    </div>
+
+    <h3>Docker Compose (Local Dev Parity)</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">docker-compose.yml</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="tag-hl">version</span>: <span class="str">'3.9'</span>
+<span class="tag-hl">services</span>:
+
+  <span class="tag-hl">app-blue</span>:
+    <span class="tag-hl">image</span>: <span class="str">${REGISTRY}/myapp:${BLUE_VERSION}</span>
+    <span class="tag-hl">container_name</span>: app-blue
+    <span class="tag-hl">environment</span>:
+      - <span class="str">NODE_ENV=production</span>
+      - <span class="str">DB_URL=${DB_URL}</span>
+    <span class="tag-hl">labels</span>:
+      - <span class="str">"traefik.enable=true"</span>
+      - <span class="str">"traefik.http.routers.blue.rule=Host(`blue.internal`)"</span>
+    <span class="tag-hl">networks</span>: [app-net]
+    <span class="tag-hl">deploy</span>:
+      <span class="tag-hl">replicas</span>: <span class="num">3</span>
+
+  <span class="tag-hl">app-green</span>:
+    <span class="tag-hl">image</span>: <span class="str">${REGISTRY}/myapp:${GREEN_VERSION}</span>
+    <span class="tag-hl">container_name</span>: app-green
+    <span class="tag-hl">environment</span>:
+      - <span class="str">NODE_ENV=production</span>
+      - <span class="str">DB_URL=${DB_URL}</span>
+    <span class="tag-hl">labels</span>:
+      - <span class="str">"traefik.enable=true"</span>
+      - <span class="str">"traefik.http.routers.green.rule=Host(`green.internal`)"</span>
+    <span class="tag-hl">networks</span>: [app-net]
+    <span class="tag-hl">deploy</span>:
+      <span class="tag-hl">replicas</span>: <span class="num">3</span>
+
+<span class="tag-hl">networks</span>:
+  <span class="tag-hl">app-net</span>:
+    <span class="tag-hl">driver</span>: overlay</pre>
+    </div>
+  </section>
+
+  <!-- KUBERNETES -->
+  <section class="section" id="kubernetes">
+    <div class="section-tag">04 — Orchestration</div>
+    <h2>Kubernetes Manifests</h2>
+    <p>
+      Kubernetes manages both the Blue and Green deployments as separate <code style="font-family:var(--mono);color:var(--amber);font-size:.85em">Deployment</code> resources.
+      A shared <code style="font-family:var(--mono);color:var(--amber);font-size:.85em">Service</code> object uses label selectors to point to the active environment.
+    </p>
+
+    <h3>Blue Deployment</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">k8s/deployment-blue.yaml</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="tag-hl">apiVersion</span>: apps/v1
+<span class="tag-hl">kind</span>: Deployment
+<span class="tag-hl">metadata</span>:
+  <span class="tag-hl">name</span>: myapp-blue
+  <span class="tag-hl">namespace</span>: production
+  <span class="tag-hl">labels</span>:
+    <span class="tag-hl">app</span>: myapp
+    <span class="tag-hl">slot</span>: blue
+    <span class="tag-hl">version</span>: <span class="str">"1.4.2"</span>
+<span class="tag-hl">spec</span>:
+  <span class="tag-hl">replicas</span>: <span class="num">3</span>
+  <span class="tag-hl">selector</span>:
+    <span class="tag-hl">matchLabels</span>:
+      <span class="tag-hl">app</span>: myapp
+      <span class="tag-hl">slot</span>: blue
+  <span class="tag-hl">template</span>:
+    <span class="tag-hl">metadata</span>:
+      <span class="tag-hl">labels</span>:
+        <span class="tag-hl">app</span>: myapp
+        <span class="tag-hl">slot</span>: blue
+        <span class="tag-hl">version</span>: <span class="str">"1.4.2"</span>
+    <span class="tag-hl">spec</span>:
+      <span class="tag-hl">containers</span>:
+      - <span class="tag-hl">name</span>: myapp
+        <span class="tag-hl">image</span>: registry.io/myapp:<span class="str">1.4.2</span>
+        <span class="tag-hl">ports</span>:
+        - <span class="tag-hl">containerPort</span>: <span class="num">3000</span>
+        <span class="tag-hl">readinessProbe</span>:
+          <span class="tag-hl">httpGet</span>:
+            <span class="tag-hl">path</span>: /health
+            <span class="tag-hl">port</span>: <span class="num">3000</span>
+          <span class="tag-hl">initialDelaySeconds</span>: <span class="num">10</span>
+          <span class="tag-hl">periodSeconds</span>: <span class="num">5</span>
+        <span class="tag-hl">livenessProbe</span>:
+          <span class="tag-hl">httpGet</span>:
+            <span class="tag-hl">path</span>: /health
+            <span class="tag-hl">port</span>: <span class="num">3000</span>
+          <span class="tag-hl">initialDelaySeconds</span>: <span class="num">20</span>
+          <span class="tag-hl">periodSeconds</span>: <span class="num">10</span>
+        <span class="tag-hl">resources</span>:
+          <span class="tag-hl">requests</span>:
+            <span class="tag-hl">cpu</span>: <span class="str">"100m"</span>
+            <span class="tag-hl">memory</span>: <span class="str">"256Mi"</span>
+          <span class="tag-hl">limits</span>:
+            <span class="tag-hl">cpu</span>: <span class="str">"500m"</span>
+            <span class="tag-hl">memory</span>: <span class="str">"512Mi"</span></pre>
+    </div>
+
+    <h3>Shared Service — Traffic Switch via Label Selector</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">k8s/service.yaml</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="tag-hl">apiVersion</span>: v1
+<span class="tag-hl">kind</span>: Service
+<span class="tag-hl">metadata</span>:
+  <span class="tag-hl">name</span>: myapp-service
+  <span class="tag-hl">namespace</span>: production
+<span class="tag-hl">spec</span>:
+  <span class="tag-hl">selector</span>:
+    <span class="tag-hl">app</span>: myapp
+    <span class="tag-hl">slot</span>: blue   <span class="cmt"># ← Change to "green" to switch traffic</span>
+  <span class="tag-hl">ports</span>:
+  - <span class="tag-hl">protocol</span>: TCP
+    <span class="tag-hl">port</span>: <span class="num">80</span>
+    <span class="tag-hl">targetPort</span>: <span class="num">3000</span>
+  <span class="tag-hl">type</span>: LoadBalancer</pre>
+    </div>
+
+    <div class="alert alert-success">
+      <span class="alert-icon">✓</span>
+      <div class="alert-body">
+        <strong>Traffic Switch Command</strong>
+        <p><code style="font-family:var(--mono);font-size:.82em">kubectl patch service myapp-service -n production -p '{"spec":{"selector":{"slot":"green"}}}'</code> — This single command atomically switches all traffic in under 2 seconds.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAFFIC -->
+  <section class="section" id="traffic">
+    <div class="section-tag">05 — Traffic Management</div>
+    <h2>Traffic Switching Simulation</h2>
+    <p>Click the buttons below to simulate different traffic distribution scenarios including weighted canary transitions and full cutover.</p>
+
+    <div class="traffic-visual">
+      <div class="traffic-lb">⚖ Load Balancer / K8s Service</div>
+      <div class="traffic-split">
+        <div class="traffic-env">
+          <div class="traffic-bar-wrap">
+            <div class="traffic-bar">
+              <div class="traffic-fill fill-blue" id="blue-fill" style="height:100%" data-pct="100%"></div>
+            </div>
+          </div>
+          <div class="traffic-name tn-blue">🔵 BLUE<br/><span style="font-size:.55rem;color:var(--muted)">v1.4.2</span></div>
+        </div>
+        <div class="traffic-env">
+          <div class="traffic-bar-wrap">
+            <div class="traffic-bar">
+              <div class="traffic-fill fill-green" id="green-fill" style="height:0%" data-pct="0%"></div>
+            </div>
+          </div>
+          <div class="traffic-name tn-green">🟢 GREEN<br/><span style="font-size:.55rem;color:var(--muted)">v1.5.0</span></div>
+        </div>
+      </div>
+      <div id="traffic-status" style="font-family:var(--mono);font-size:.68rem;color:var(--muted);text-align:center">
+        Current: Blue serves 100% traffic
+      </div>
+      <div class="traffic-controls">
+        <button class="tc-btn tb" onclick="setTraffic(100,0,'Blue serves 100% — pre-deployment')">100% Blue</button>
+        <button class="tc-btn tg" onclick="setTraffic(90,10,'Canary: 10% to Green for validation')">10% Canary</button>
+        <button class="tc-btn tg" onclick="setTraffic(50,50,'50/50 split — parallel validation')">50/50 Split</button>
+        <button class="tc-btn tg" onclick="setTraffic(0,100,'Full cutover — Green is now live!')">100% Green</button>
+        <button class="tc-btn tr" onclick="setTraffic(100,0,'⚠ Rolled back — Blue is live again')">Rollback</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- JENKINS -->
+  <section class="section" id="jenkins">
+    <div class="section-tag">06 — CI/CD</div>
+    <h2>Jenkins Pipeline</h2>
+    <p>
+      The Jenkins Declarative Pipeline automates the entire blue-green deployment lifecycle.
+      It detects the active slot, deploys to the inactive slot, runs tests, and switches traffic — all without manual intervention.
+    </p>
+
+    <h3>Pipeline Stages Overview</h3>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="p-num">01</div>
+        <div class="p-icon">📥</div>
+        <div class="p-label">Checkout</div>
+        <div class="p-sub">Git SCM</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="p-num">02</div>
+        <div class="p-icon">🏗</div>
+        <div class="p-label">Build Image</div>
+        <div class="p-sub">Docker Build</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="p-num">03</div>
+        <div class="p-icon">🧪</div>
+        <div class="p-label">Unit Tests</div>
+        <div class="p-sub">Jest/JUnit</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="p-num">04</div>
+        <div class="p-icon">🔍</div>
+        <div class="p-label">Security Scan</div>
+        <div class="p-sub">Trivy</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="p-num">05</div>
+        <div class="p-icon">📤</div>
+        <div class="p-label">Push Image</div>
+        <div class="p-sub">Registry</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="p-num">06</div>
+        <div class="p-icon">🚀</div>
+        <div class="p-label">Deploy Green</div>
+        <div class="p-sub">kubectl</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="p-num">07</div>
+        <div class="p-icon">✅</div>
+        <div class="p-label">Smoke Tests</div>
+        <div class="p-sub">Postman/curl</div>
+      </div>
+      <div class="pipe-arrow">›</div>
+      <div class="pipe-step">
+        <div class="p-num">08</div>
+        <div class="p-icon">⇄</div>
+        <div class="p-label">Switch Traffic</div>
+        <div class="p-sub">K8s patch</div>
+      </div>
+    </div>
+
+    <h3>Jenkinsfile</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">Jenkinsfile</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">pipeline</span> {
+  <span class="kw">agent</span> any
+  <span class="tag-hl">environment</span> {
+    REGISTRY     = <span class="str">'registry.company.io'</span>
+    IMAGE_NAME   = <span class="str">'myapp'</span>
+    K8S_NS       = <span class="str">'production'</span>
+    IMAGE_TAG    = <span class="str">"${BUILD_NUMBER}-${GIT_COMMIT[0..7]}"</span>
+  }
+
+  <span class="kw">stages</span> {
+
+    <span class="kw">stage</span>(<span class="str">'Checkout'</span>) {
+      <span class="kw">steps</span> {
+        <span class="fn">checkout</span> scm
+        <span class="fn">script</span> {
+          env.GIT_COMMIT_MSG = sh(script: <span class="str">'git log -1 --pretty=%B'</span>, returnStdout: <span class="kw">true</span>).trim()
+        }
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Build &amp; Push Image'</span>) {
+      <span class="kw">steps</span> {
+        <span class="fn">script</span> {
+          docker.withRegistry(<span class="str">"https://${REGISTRY}"</span>, <span class="str">'registry-creds'</span>) {
+            def img = docker.build(
+              <span class="str">"${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"</span>,
+              <span class="str">"--build-arg BUILD_VERSION=${IMAGE_TAG} ."</span>
+            )
+            img.push()
+            img.push(<span class="str">'latest'</span>)
+          }
+        }
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Security Scan'</span>) {
+      <span class="kw">steps</span> {
+        sh <span class="str">"""
+          trivy image --exit-code 1 --severity HIGH,CRITICAL \\
+            ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+        """</span>
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Detect Active Slot'</span>) {
+      <span class="kw">steps</span> {
+        <span class="fn">script</span> {
+          env.ACTIVE_SLOT = sh(
+            script: <span class="str">"""kubectl get svc myapp-service -n ${K8S_NS} \\
+              -o jsonpath='{.spec.selector.slot}'"""</span>,
+            returnStdout: <span class="kw">true</span>
+          ).trim()
+          env.DEPLOY_SLOT = (env.ACTIVE_SLOT == <span class="str">'blue'</span>) ? <span class="str">'green'</span> : <span class="str">'blue'</span>
+          <span class="fn">echo</span> <span class="str">"Active: ${ACTIVE_SLOT} → Deploying to: ${DEPLOY_SLOT}"</span>
+        }
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Deploy to Inactive Slot'</span>) {
+      <span class="kw">steps</span> {
+        <span class="fn">script</span> {
+          sh <span class="str">"""
+            kubectl set image deployment/myapp-${DEPLOY_SLOT} \\
+              myapp=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
+              -n ${K8S_NS}
+            kubectl rollout status deployment/myapp-${DEPLOY_SLOT} \\
+              -n ${K8S_NS} --timeout=300s
+          """</span>
+        }
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Smoke Tests'</span>) {
+      <span class="kw">steps</span> {
+        <span class="fn">script</span> {
+          def greenUrl = sh(
+            script: <span class="str">"""kubectl get svc myapp-${DEPLOY_SLOT}-internal \\
+              -n ${K8S_NS} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"""</span>,
+            returnStdout: <span class="kw">true</span>
+          ).trim()
+          sh <span class="str">"""
+            curl -sf http://${greenUrl}/health | grep -q '"status":"ok"'
+            curl -sf http://${greenUrl}/api/ping | grep -q 'pong'
+          """</span>
+        }
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Switch Traffic'</span>) {
+      <span class="kw">steps</span> {
+        <span class="fn">script</span> {
+          sh <span class="str">"""
+            kubectl patch service myapp-service -n ${K8S_NS} \\
+              -p '{"spec":{"selector":{"slot":"${DEPLOY_SLOT}"}}}'
+          """</span>
+          <span class="fn">echo</span> <span class="str">"✅ Traffic switched to ${DEPLOY_SLOT} (${IMAGE_TAG})"</span>
+        }
+      }
+    }
+  }
+
+  <span class="tag-hl">post</span> {
+    <span class="fn">failure</span> {
+      <span class="fn">script</span> {
+        <span class="cmt">// Auto-rollback on failure</span>
+        sh <span class="str">"""kubectl patch service myapp-service -n ${K8S_NS} \\
+          -p '{"spec":{"selector":{"slot":"${ACTIVE_SLOT}"}}}'"""</span>
+        <span class="fn">slackSend</span> channel: <span class="str">'#deployments'</span>,
+          color: <span class="str">'danger'</span>,
+          message: <span class="str">"❌ Deployment FAILED for ${IMAGE_TAG}. Rolled back to ${ACTIVE_SLOT}."</span>
+      }
+    }
+    <span class="fn">success</span> {
+      <span class="fn">slackSend</span> channel: <span class="str">'#deployments'</span>,
+        color: <span class="str">'good'</span>,
+        message: <span class="str">"✅ Deployed ${IMAGE_TAG} to ${DEPLOY_SLOT} successfully."</span>
+    }
+  }
+}</pre>
+    </div>
+  </section>
+
+  <!-- ROLLBACK -->
+  <section class="section" id="rollback">
+    <div class="section-tag">07 — Recovery</div>
+    <h2>Rollback Strategy</h2>
+    <p>
+      Because the previous environment remains intact and scaled, rollback is a pure traffic switch — not a re-deployment.
+      This makes mean time to recovery (MTTR) dramatically lower compared to traditional rolling deployments.
+    </p>
+
+    <h3>Automatic Rollback Triggers</h3>
+    <div class="rollback-flow">
+      <div class="rb-box rb-trigger">Error Rate &gt; 1%</div>
+      <div class="rb-arrow">→</div>
+      <div class="rb-box rb-action">Alert Fires</div>
+      <div class="rb-arrow">→</div>
+      <div class="rb-box rb-action">Jenkins Job Triggered</div>
+      <div class="rb-arrow">→</div>
+      <div class="rb-box rb-action">K8s Service Patched</div>
+      <div class="rb-arrow">→</div>
+      <div class="rb-box rb-done">✓ Rolled Back</div>
+    </div>
+
+    <h3>Manual Rollback Script</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">scripts/rollback.sh</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cmt">#!/bin/bash</span>
+<span class="kw">set</span> <span class="op">-euo</span> pipefail
+
+NS=<span class="str">"production"</span>
+SVC=<span class="str">"myapp-service"</span>
+
+<span class="cmt"># Detect current active slot</span>
+CURRENT=$(kubectl get svc $SVC -n $NS -o jsonpath=<span class="str">'{.spec.selector.slot}'</span>)
+TARGET=$( [[ <span class="str">"$CURRENT"</span> == <span class="str">"blue"</span> ]] &amp;&amp; echo <span class="str">"green"</span> || echo <span class="str">"blue"</span> )
+
+echo <span class="str">"Rolling back: ${CURRENT} → ${TARGET}"</span>
+
+<span class="cmt"># Switch traffic</span>
+kubectl patch service $SVC -n $NS \
+  -p "{\"spec\":{\"selector\":{\"slot\":\"${TARGET}\"}}}"
+
+<span class="cmt"># Verify</span>
+VERIFY=$(kubectl get svc $SVC -n $NS -o jsonpath=<span class="str">'{.spec.selector.slot}'</span>)
+echo <span class="str">"✅ Traffic now pointing to: ${VERIFY}"</span></pre>
+    </div>
+  </section>
+
+  <!-- MONITORING -->
+  <section class="section" id="monitoring">
+    <div class="section-tag">08 — Observability</div>
+    <h2>Monitoring &amp; Health Checks</h2>
+    <p>Observability is critical for safe deployments. The following stack provides full visibility into deployment health.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Role</th>
+            <th>Key Metrics</th>
+            <th>Alert Threshold</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Prometheus</strong></td>
+            <td>Metrics scraping</td>
+            <td>Request rate, latency, error rate</td>
+            <td>Error rate &gt; 1% → rollback</td>
+          </tr>
+          <tr>
+            <td><strong>Grafana</strong></td>
+            <td>Dashboards</td>
+            <td>P50/P99 latency, pod restarts</td>
+            <td>P99 &gt; 500ms → alert</td>
+          </tr>
+          <tr>
+            <td><strong>Alertmanager</strong></td>
+            <td>Alert routing</td>
+            <td>Threshold breaches</td>
+            <td>PagerDuty + Slack</td>
+          </tr>
+          <tr>
+            <td><strong>Loki</strong></td>
+            <td>Log aggregation</td>
+            <td>Error logs per slot</td>
+            <td>Error spike → webhook</td>
+          </tr>
+          <tr>
+            <td><strong>Jaeger</strong></td>
+            <td>Distributed tracing</td>
+            <td>Trace spans per deployment slot</td>
+            <td>Slow traces &gt; 2s</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert alert-warning">
+      <span class="alert-icon">⚠</span>
+      <div class="alert-body">
+        <strong>Post-Switch Observation Window</strong>
+        <p>After switching traffic to Green, maintain a 15–30 minute observation window before scaling down Blue. Monitor error rates, latency P99, and pod crash loops before considering the deployment complete.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEST PRACTICES -->
+  <section class="section" id="best-practices">
+    <div class="section-tag">09 — Guidelines</div>
+    <h2>Best Practices</h2>
+
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h5>Database Migrations Must Be Backwards-Compatible</h5>
+          <p>New schema changes must support both old and new code simultaneously. Use the expand-contract pattern: add columns before removing old ones.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h5>Tag Images with Git SHA, Never Just "latest"</h5>
+          <p>Use immutable tags like <code style="font-family:var(--mono);color:var(--amber);font-size:.85em">registry/app:1.5.0-a3f8c21</code> for full traceability and reproducibility of any deployed version.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h5>Keep Both Slots Warm</h5>
+          <p>Scale down idle slot replicas to 1 (not 0) to keep pods warm and ready for instant failover without cold start delays.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h5>Smoke Tests Are Non-Negotiable</h5>
+          <p>Automate critical user journey tests (login, key API endpoints, data retrieval) that must pass before any traffic switch is allowed.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h5>Feature Flags Over Multiple Deployments</h5>
+          <p>Combine blue-green with feature flags to decouple deployment from feature release — deploy often, release when business-ready.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <h5>Cost Management with HPA</h5>
+          <p>Use Kubernetes HorizontalPodAutoscaler on the idle slot to scale down to minimum replicas during off-hours, reducing infrastructure costs.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ── Progress Bar ──
+window.addEventListener('scroll', () => {
+  const scrollTop = document.documentElement.scrollTop;
+  const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+});
+
+// ── Active Nav ──
+const sections = document.querySelectorAll('.section, .hero');
+const navLinks = document.querySelectorAll('#nav a');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const id = e.target.id;
+      navLinks.forEach(l => {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+
+sections.forEach(s => s.id && observer.observe(s));
+
+// ── Copy Code ──
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'copied!';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => { btn.textContent = 'copy'; btn.style.color = ''; }, 2000);
+  });
+}
+
+// ── Traffic Simulation ──
+function setTraffic(bluePct, greenPct, label) {
+  const blueFill = document.getElementById('blue-fill');
+  const greenFill = document.getElementById('green-fill');
+
+  blueFill.style.height = bluePct + '%';
+  blueFill.setAttribute('data-pct', bluePct + '%');
+  greenFill.style.height = greenPct + '%';
+  greenFill.setAttribute('data-pct', greenPct + '%');
+
+  document.getElementById('traffic-status').textContent = label;
+}
+
+// ── Mobile Sidebar ──
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+</script>
+</body>
+</html>

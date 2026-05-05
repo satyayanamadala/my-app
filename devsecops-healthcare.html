@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DevSecOps — Secure Healthcare System Implementation</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #f5f2ee;
+  --surface: #ffffff;
+  --card: #fefefe;
+  --border: #e2ddd7;
+  --border2: #ccc8c0;
+  --navy: #0f2040;
+  --teal: #0a7c6e;
+  --teal-dim: rgba(10,124,110,0.08);
+  --red: #c0392b;
+  --red-dim: rgba(192,57,43,0.08);
+  --amber: #b8860b;
+  --amber-dim: rgba(184,134,11,0.09);
+  --blue: #1a56a0;
+  --blue-dim: rgba(26,86,160,0.08);
+  --text: #1e2030;
+  --muted: #6b6b7b;
+  --light: #8a8a9a;
+  --mono: 'DM Mono', monospace;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.75; overflow-x: hidden; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--teal); }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0; width: 270px;
+  background: var(--navy);
+  z-index: 100;
+  display: flex; flex-direction: column;
+  transition: transform .3s ease;
+}
+
+.sb-header {
+  padding: 2rem 1.5rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.sb-shield {
+  width: 40px; height: 40px;
+  background: var(--teal);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.sb-eyebrow {
+  font-family: var(--mono);
+  font-size: .58rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: .4rem;
+}
+
+.sb-title {
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.compliance-row {
+  display: flex; gap: .35rem; flex-wrap: wrap;
+  margin-top: .9rem;
+}
+
+.cbadge {
+  font-family: var(--mono);
+  font-size: .55rem;
+  padding: .18rem .5rem;
+  border-radius: 3px;
+  letter-spacing: .06em;
+  font-weight: 500;
+}
+
+.cb-red { background: rgba(192,57,43,.25); color: #ff9980; border: 1px solid rgba(192,57,43,.4); }
+.cb-teal { background: rgba(10,124,110,.25); color: #7dfaed; border: 1px solid rgba(10,124,110,.4); }
+.cb-amber { background: rgba(184,134,11,.2); color: #ffd97a; border: 1px solid rgba(184,134,11,.35); }
+.cb-blue { background: rgba(26,86,160,.25); color: #90c4ff; border: 1px solid rgba(26,86,160,.4); }
+
+#nav { flex: 1; overflow-y: auto; padding: .5rem .75rem; }
+
+.nav-label {
+  font-family: var(--mono);
+  font-size: .55rem;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: rgba(255,255,255,.3);
+  padding: .7rem .75rem .2rem;
+}
+
+#nav a {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .48rem .75rem;
+  border-radius: 5px;
+  text-decoration: none;
+  color: rgba(255,255,255,.5);
+  font-size: .8rem;
+  font-weight: 500;
+  transition: all .18s;
+  border: 1px solid transparent;
+}
+
+#nav a:hover { color: rgba(255,255,255,.9); background: rgba(255,255,255,.06); }
+#nav a.active { color: #7dfaed; background: rgba(10,124,110,.18); border-color: rgba(10,124,110,.3); }
+#nav a .ico { font-size: .8rem; width: 16px; text-align: center; }
+
+.sb-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255,255,255,.08);
+  font-family: var(--mono);
+  font-size: .55rem;
+  color: rgba(255,255,255,.3);
+  line-height: 1.6;
+}
+
+/* ── MAIN ── */
+main { margin-left: 270px; position: relative; }
+
+/* ── PROGRESS ── */
+#progress-bar {
+  position: fixed; top: 0; left: 270px; right: 0; height: 3px;
+  background: transparent; z-index: 200;
+}
+#progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal), #2dd4bf);
+  width: 0%;
+  transition: width .1s;
+}
+
+/* ── HERO ── */
+.hero {
+  background: var(--navy);
+  padding: 5rem 3.5rem 4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '🛡';
+  position: absolute;
+  right: 3rem; top: 3rem;
+  font-size: 10rem;
+  opacity: .04;
+  user-select: none;
+}
+
+.hero-line {
+  font-family: var(--mono);
+  font-size: .65rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: .85rem;
+  display: flex; align-items: center; gap: .75rem;
+}
+
+.hero-line::after {
+  content: '';
+  display: inline-block;
+  width: 48px; height: 1px;
+  background: var(--teal);
+}
+
+.hero h1 {
+  font-family: var(--serif);
+  font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+  font-weight: 700;
+  line-height: 1.05;
+  color: #fff;
+  margin-bottom: 1.25rem;
+  letter-spacing: -.01em;
+}
+
+.hero h1 em { color: #7dfaed; font-style: normal; }
+
+.hero-desc {
+  max-width: 600px;
+  font-size: .95rem;
+  color: rgba(255,255,255,.55);
+  margin-bottom: 2.5rem;
+  line-height: 1.8;
+}
+
+.hero-pillars {
+  display: flex; gap: 1.25rem; flex-wrap: wrap;
+}
+
+.pillar {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  padding: .9rem 1.25rem;
+  display: flex; align-items: center; gap: .75rem;
+  min-width: 170px;
+}
+
+.pillar-icon { font-size: 1.3rem; }
+.pillar-text {}
+.pillar-name { font-size: .8rem; font-weight: 600; color: #fff; }
+.pillar-sub { font-family: var(--mono); font-size: .6rem; color: rgba(255,255,255,.4); }
+
+/* ── SECTION ── */
+.section { padding: 3.5rem 3.5rem; border-bottom: 1px solid var(--border); background: var(--surface); }
+.section:nth-child(even) { background: var(--bg); }
+
+.section-tag {
+  font-family: var(--mono);
+  font-size: .6rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: .5rem;
+}
+
+.section h2 {
+  font-family: var(--serif);
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.section h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 1.75rem 0 .6rem;
+  padding-left: .75rem;
+  border-left: 3px solid var(--teal);
+}
+
+.section p { color: var(--muted); margin-bottom: .85rem; max-width: 780px; font-size: .92rem; }
+
+/* ── DEVSECOPS MODEL ── */
+.dso-loop {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 2rem 0;
+  overflow-x: auto;
+  padding-bottom: .5rem;
+}
+
+.dso-phase {
+  flex: 1; min-width: 120px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-right: none;
+  padding: 1.1rem .9rem;
+  text-align: center;
+  position: relative;
+  transition: background .18s;
+}
+
+.dso-phase:first-child { border-radius: 8px 0 0 8px; }
+.dso-phase:last-child { border-right: 1px solid var(--border); border-radius: 0 8px 8px 0; }
+.dso-phase:hover { background: var(--teal-dim); }
+
+.dso-phase::after {
+  content: '›';
+  position: absolute;
+  right: -10px; top: 50%; transform: translateY(-50%);
+  color: var(--border2);
+  font-size: 1.2rem;
+  z-index: 2;
+}
+
+.dso-phase:last-child::after { display: none; }
+
+.phase-icon { font-size: 1.4rem; margin-bottom: .4rem; }
+.phase-name { font-size: .72rem; font-weight: 700; color: var(--navy); margin-bottom: .25rem; }
+.phase-tool { font-family: var(--mono); font-size: .58rem; color: var(--muted); }
+.phase-sec { font-family: var(--mono); font-size: .55rem; color: var(--teal); margin-top: .2rem; background: var(--teal-dim); border-radius: 3px; padding: .1rem .3rem; display: inline-block; }
+
+/* ── THREAT MODEL ── */
+.threat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+
+.threat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 3px solid;
+  border-radius: 6px;
+  padding: 1.2rem;
+  transition: transform .18s, box-shadow .18s;
+}
+
+.threat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+
+.threat-card.crit { border-top-color: var(--red); }
+.threat-card.high { border-top-color: var(--amber); }
+.threat-card.med { border-top-color: var(--blue); }
+.threat-card.low { border-top-color: var(--teal); }
+
+.threat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; }
+.threat-title { font-weight: 700; font-size: .9rem; color: var(--navy); }
+
+.sev-badge {
+  font-family: var(--mono);
+  font-size: .55rem;
+  padding: .15rem .45rem;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.sev-crit { background: var(--red-dim); color: var(--red); border: 1px solid rgba(192,57,43,.25); }
+.sev-high { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(184,134,11,.25); }
+.sev-med { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(26,86,160,.25); }
+.sev-low { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(10,124,110,.25); }
+
+.threat-card p { font-size: .8rem; color: var(--muted); margin: 0 0 .6rem; line-height: 1.55; }
+.threat-mitigation { font-family: var(--mono); font-size: .65rem; color: var(--teal); background: var(--teal-dim); border-radius: 4px; padding: .35rem .6rem; }
+
+/* ── CODE BLOCK ── */
+.code-wrap {
+  background: #0f2040;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1.25rem 0;
+  max-width: 860px;
+}
+
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .6rem 1rem;
+  background: rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.code-filename { font-family: var(--mono); font-size: .65rem; color: rgba(255,255,255,.4); }
+.code-dots { display: flex; gap: .4rem; }
+.code-dots span { width: 10px; height: 10px; border-radius: 50%; }
+.d1 { background: #ff5f57; } .d2 { background: #febc2e; } .d3 { background: #28c840; }
+
+.code-copy {
+  font-family: var(--mono); font-size: .6rem;
+  color: rgba(255,255,255,.35);
+  background: none; border: 1px solid rgba(255,255,255,.15); border-radius: 3px;
+  padding: .2rem .5rem; cursor: pointer; transition: all .18s;
+}
+.code-copy:hover { color: #7dfaed; border-color: rgba(10,124,110,.6); }
+
+pre { padding: 1.2rem 1.25rem; overflow-x: auto; font-family: var(--mono); font-size: .76rem; line-height: 1.85; color: rgba(255,255,255,.65); }
+.kw { color: #6eb6e8; }
+.fn { color: #7dfaed; }
+.str { color: #f1a060; }
+.cmt { color: rgba(255,255,255,.28); font-style: italic; }
+.num { color: #ffd97a; }
+.tag-hl { color: #b5d3ff; }
+.op { color: #e8a0d0; }
+.key { color: #90e090; }
+
+/* ── COMPLIANCE TABLE ── */
+.tbl-wrap { overflow-x: auto; margin: 1.25rem 0; max-width: 860px; }
+table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+thead tr { border-bottom: 2px solid var(--navy); }
+th { padding: .75rem 1rem; text-align: left; font-family: var(--mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--navy); background: rgba(15,32,64,.04); }
+td { padding: .65rem 1rem; border-bottom: 1px solid var(--border); color: var(--text); font-size: .82rem; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--teal-dim); }
+
+.status-pass { color: var(--teal); font-family: var(--mono); font-size: .7rem; font-weight: 600; }
+.status-req { color: var(--red); font-family: var(--mono); font-size: .7rem; font-weight: 600; }
+.status-warn { color: var(--amber); font-family: var(--mono); font-size: .7rem; font-weight: 600; }
+
+/* ── POLICY CHECKER ── */
+.policy-checker {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  max-width: 700px;
+  margin: 1.5rem 0;
+}
+
+.pc-header {
+  background: var(--navy);
+  padding: .9rem 1.25rem;
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: #7dfaed;
+  display: flex; align-items: center; gap: .5rem;
+}
+
+.pc-body { padding: 1.25rem; }
+
+.pc-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .6rem .75rem;
+  border-radius: 6px;
+  margin-bottom: .4rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.pc-item:hover { background: var(--teal-dim); }
+.pc-item:last-child { margin-bottom: 0; }
+
+.pc-name { font-size: .82rem; font-weight: 600; color: var(--navy); }
+.pc-desc { font-size: .72rem; color: var(--muted); margin-top: .1rem; }
+
+.pc-status {
+  font-family: var(--mono);
+  font-size: .62rem;
+  padding: .2rem .6rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all .18s;
+}
+
+.pc-pass { background: var(--teal-dim); color: var(--teal); border-color: rgba(10,124,110,.3); }
+.pc-fail { background: var(--red-dim); color: var(--red); border-color: rgba(192,57,43,.3); }
+.pc-warn { background: var(--amber-dim); color: var(--amber); border-color: rgba(184,134,11,.3); }
+
+/* ── ALERTS ── */
+.alert {
+  display: flex; gap: .75rem;
+  padding: .9rem 1.1rem;
+  border-radius: 7px;
+  margin: 1rem 0;
+  border-left: 3px solid;
+  font-size: .85rem;
+  max-width: 780px;
+}
+
+.alert-icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
+.alert-body strong { display: block; margin-bottom: .2rem; font-size: .82rem; }
+.alert-body p { margin: 0; font-size: .8rem; line-height: 1.55; }
+
+.alert-info { background: var(--blue-dim); border-color: var(--blue); }
+.alert-info .alert-icon, .alert-info strong { color: var(--blue); }
+.alert-info p { color: var(--muted); }
+
+.alert-danger { background: var(--red-dim); border-color: var(--red); }
+.alert-danger .alert-icon, .alert-danger strong { color: var(--red); }
+.alert-danger p { color: var(--muted); }
+
+.alert-success { background: var(--teal-dim); border-color: var(--teal); }
+.alert-success .alert-icon, .alert-success strong { color: var(--teal); }
+.alert-success p { color: var(--muted); }
+
+/* ── STEPS ── */
+.steps { counter-reset: step; display: flex; flex-direction: column; gap: .75rem; margin: 1rem 0; max-width: 780px; }
+.step-item { display: flex; gap: 1rem; align-items: flex-start; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; transition: border-color .18s; }
+.step-item:hover { border-color: var(--teal); }
+.step-num { counter-increment: step; flex-shrink: 0; width: 28px; height: 28px; background: var(--teal-dim); border: 1px solid rgba(10,124,110,.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: .65rem; font-weight: 700; color: var(--teal); }
+.step-body h5 { font-size: .9rem; font-weight: 700; color: var(--navy); margin-bottom: .25rem; }
+.step-body p { font-size: .82rem; color: var(--muted); margin: 0; }
+
+/* ── CARDS ── */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem 1.4rem; transition: border-color .2s, transform .2s; }
+.card:hover { border-color: var(--teal); transform: translateY(-2px); }
+.card-icon { font-size: 1.4rem; margin-bottom: .6rem; }
+.card h4 { font-size: .95rem; font-weight: 700; color: var(--navy); margin-bottom: .4rem; }
+.card p { font-size: .82rem; color: var(--muted); line-height: 1.6; margin: 0; }
+
+/* ── AUDIT LOG ── */
+.audit-log {
+  background: #0f2040;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 780px;
+  margin: 1.25rem 0;
+  font-family: var(--mono);
+}
+
+.audit-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .6rem 1rem;
+  background: rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  font-size: .62rem;
+  color: rgba(255,255,255,.4);
+}
+
+.audit-entry {
+  display: flex; gap: 1rem; align-items: flex-start;
+  padding: .5rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  font-size: .7rem;
+  transition: background .15s;
+}
+
+.audit-entry:hover { background: rgba(255,255,255,.03); }
+.audit-entry:last-child { border-bottom: none; }
+
+.ae-time { color: rgba(255,255,255,.3); white-space: nowrap; flex-shrink: 0; }
+.ae-level { flex-shrink: 0; width: 54px; }
+.ae-info { color: #7dfaed; }
+.ae-warn { color: #ffd97a; }
+.ae-error { color: #ff9980; }
+.ae-msg { color: rgba(255,255,255,.7); }
+.ae-user { color: rgba(255,255,255,.35); font-style: italic; }
+
+/* ── MOBILE ── */
+#menu-btn { display: none; position: fixed; top: 1rem; right: 1rem; z-index: 200; background: var(--navy); border: 1px solid rgba(255,255,255,.15); border-radius: 6px; width: 38px; height: 38px; cursor: pointer; align-items: center; justify-content: center; font-size: 1.1rem; color: #fff; }
+
+@media (max-width: 768px) {
+  #sidebar { transform: translateX(-100%); }
+  #sidebar.open { transform: translateX(0); }
+  main { margin-left: 0; }
+  #menu-btn { display: flex; }
+  #progress-bar { left: 0; }
+  .hero { padding: 4rem 1.5rem 2.5rem; }
+  .section { padding: 2.5rem 1.5rem; }
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.hero-line, .hero h1, .hero-desc, .hero-pillars { animation: fadeUp .6s ease both; }
+.hero h1 { animation-delay: .1s; }
+.hero-desc { animation-delay: .2s; }
+.hero-pillars { animation-delay: .3s; }
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+
+.audit-log::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(125,250,237,.3), transparent);
+  animation: scanline 3s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.audit-log { position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"><div id="progress-fill"></div></div>
+<button id="menu-btn" onclick="toggleSidebar()">☰</button>
+
+<!-- ── SIDEBAR ── -->
+<aside id="sidebar">
+  <div class="sb-header">
+    <div class="sb-shield">🛡</div>
+    <div class="sb-eyebrow">DevSecOps</div>
+    <div class="sb-title">Healthcare System<br/>Security Implementation</div>
+    <div class="compliance-row">
+      <span class="cbadge cb-red">HIPAA</span>
+      <span class="cbadge cb-teal">HITECH</span>
+      <span class="cbadge cb-amber">SOC 2</span>
+      <span class="cbadge cb-blue">NIST</span>
+    </div>
+  </div>
+  <nav id="nav">
+    <div class="nav-label">Introduction</div>
+    <a href="#overview" class="active"><span class="ico">◈</span> Overview</a>
+    <a href="#model"><span class="ico">⟳</span> DevSecOps Model</a>
+    <div class="nav-label">Security Controls</div>
+    <a href="#threats"><span class="ico">⚠</span> Threat Modeling</a>
+    <a href="#sast-dast"><span class="ico">🔎</span> SAST &amp; DAST</a>
+    <a href="#secrets"><span class="ico">🔐</span> Secrets Management</a>
+    <a href="#network"><span class="ico">🕸</span> Network Security</a>
+    <div class="nav-label">Compliance</div>
+    <a href="#hipaa"><span class="ico">📋</span> HIPAA Controls</a>
+    <a href="#iam"><span class="ico">👤</span> IAM &amp; RBAC</a>
+    <a href="#audit"><span class="ico">📝</span> Audit Logging</a>
+    <div class="nav-label">Operations</div>
+    <a href="#pipeline"><span class="ico">⚙</span> Secure Pipeline</a>
+    <a href="#incident"><span class="ico">🚨</span> Incident Response</a>
+    <a href="#checklist"><span class="ico">✓</span> Launch Checklist</a>
+  </nav>
+  <div class="sb-footer">
+    Healthcare DevSecOps v3.1<br/>
+    HIPAA-Compliant Architecture
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<main>
+
+  <!-- HERO -->
+  <section class="hero" id="overview">
+    <div class="hero-line">Secure by Design</div>
+    <h1>DevSecOps in<br/><em>Healthcare Systems</em></h1>
+    <p class="hero-desc">
+      Embedding security at every phase of the software development lifecycle —
+      from code commit to production deployment — while maintaining HIPAA compliance,
+      protecting PHI, and enabling rapid, safe delivery of healthcare software.
+    </p>
+    <div class="hero-pillars">
+      <div class="pillar">
+        <div class="pillar-icon">🔒</div>
+        <div class="pillar-text">
+          <div class="pillar-name">Shift Left Security</div>
+          <div class="pillar-sub">Security at commit time</div>
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">📋</div>
+        <div class="pillar-text">
+          <div class="pillar-name">HIPAA Compliance</div>
+          <div class="pillar-sub">PHI protection built-in</div>
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">🔄</div>
+        <div class="pillar-text">
+          <div class="pillar-name">Continuous Security</div>
+          <div class="pillar-sub">Scan every build</div>
+        </div>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">🚨</div>
+        <div class="pillar-text">
+          <div class="pillar-name">Rapid Response</div>
+          <div class="pillar-sub">Automated remediation</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODEL -->
+  <section class="section" id="model">
+    <div class="section-tag">01 — Framework</div>
+    <h2>The DevSecOps Infinity Model</h2>
+    <p>
+      Traditional DevOps treats security as a final gate before release. DevSecOps integrates security as a shared
+      responsibility across every phase — making security a feature of the development process, not a separate audit.
+    </p>
+    <p>In healthcare, this matters critically: a single PHI exposure can result in multi-million dollar HIPAA penalties,
+    loss of patient trust, and regulatory shutdowns.</p>
+
+    <div class="dso-loop">
+      <div class="dso-phase">
+        <div class="phase-icon">✍</div>
+        <div class="phase-name">Plan</div>
+        <div class="phase-tool">Jira, Confluence</div>
+        <div class="phase-sec">Threat Model</div>
+      </div>
+      <div class="dso-phase">
+        <div class="phase-icon">💻</div>
+        <div class="phase-name">Code</div>
+        <div class="phase-tool">VS Code, Git</div>
+        <div class="phase-sec">Pre-commit Hooks</div>
+      </div>
+      <div class="dso-phase">
+        <div class="phase-icon">🏗</div>
+        <div class="phase-name">Build</div>
+        <div class="phase-tool">Jenkins, Docker</div>
+        <div class="phase-sec">SAST + SCA</div>
+      </div>
+      <div class="dso-phase">
+        <div class="phase-icon">🧪</div>
+        <div class="phase-name">Test</div>
+        <div class="phase-tool">JUnit, Selenium</div>
+        <div class="phase-sec">DAST / Pentest</div>
+      </div>
+      <div class="dso-phase">
+        <div class="phase-icon">📦</div>
+        <div class="phase-name">Release</div>
+        <div class="phase-tool">Helm, ArgoCD</div>
+        <div class="phase-sec">Image Signing</div>
+      </div>
+      <div class="dso-phase">
+        <div class="phase-icon">🚀</div>
+        <div class="phase-name">Deploy</div>
+        <div class="phase-tool">Kubernetes</div>
+        <div class="phase-sec">OPA Policies</div>
+      </div>
+      <div class="dso-phase">
+        <div class="phase-icon">⚙</div>
+        <div class="phase-name">Operate</div>
+        <div class="phase-tool">Prometheus</div>
+        <div class="phase-sec">Runtime Sec</div>
+      </div>
+      <div class="dso-phase">
+        <div class="phase-icon">📊</div>
+        <div class="phase-name">Monitor</div>
+        <div class="phase-tool">Splunk, ELK</div>
+        <div class="phase-sec">SIEM Alerts</div>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <span class="alert-icon">ℹ</span>
+      <div class="alert-body">
+        <strong>Healthcare Context</strong>
+        <p>Every phase must account for Protected Health Information (PHI). All secrets, credentials, and patient data references must be scanned, encrypted at rest and in transit, and access-logged for HIPAA audit trails.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- THREATS -->
+  <section class="section" id="threats">
+    <div class="section-tag">02 — Threat Modeling</div>
+    <h2>Healthcare Threat Landscape</h2>
+    <p>
+      Healthcare organizations are the #1 target for ransomware and data breaches globally.
+      STRIDE threat modeling identifies attack vectors specific to clinical and patient data systems.
+    </p>
+
+    <div class="threat-grid">
+      <div class="threat-card crit">
+        <div class="threat-head">
+          <div class="threat-title">PHI Data Exfiltration</div>
+          <span class="sev-badge sev-crit">CRITICAL</span>
+        </div>
+        <p>Unauthorized access to patient records, insurance data, or diagnosis history via SQL injection, broken access control, or insider threats.</p>
+        <div class="threat-mitigation">→ RBAC + column-level encryption + DLP</div>
+      </div>
+      <div class="threat-card crit">
+        <div class="threat-head">
+          <div class="threat-title">Ransomware Attack</div>
+          <span class="sev-badge sev-crit">CRITICAL</span>
+        </div>
+        <p>Malicious actors encrypt clinical systems, halting patient care. Healthcare systems are targeted 3× more than any other sector.</p>
+        <div class="threat-mitigation">→ Network segmentation + immutable backups</div>
+      </div>
+      <div class="threat-card high">
+        <div class="threat-head">
+          <div class="threat-title">Insecure API Endpoints</div>
+          <span class="sev-badge sev-high">HIGH</span>
+        </div>
+        <p>HL7 FHIR APIs with missing authentication, broken object-level authorization, or verbose error messages exposing PHI in responses.</p>
+        <div class="threat-mitigation">→ OAuth 2.0 + FHIR SMART scope validation</div>
+      </div>
+      <div class="threat-card high">
+        <div class="threat-head">
+          <div class="threat-title">Secrets in Source Code</div>
+          <span class="sev-badge sev-high">HIGH</span>
+        </div>
+        <p>Database credentials, API keys, or encryption keys committed to version control. Frequently exploited via public repository exposure.</p>
+        <div class="threat-mitigation">→ HashiCorp Vault + GitLeaks pre-commit</div>
+      </div>
+      <div class="threat-card med">
+        <div class="threat-head">
+          <div class="threat-title">Vulnerable Dependencies</div>
+          <span class="sev-badge sev-med">MEDIUM</span>
+        </div>
+        <p>Third-party libraries with known CVEs included in production builds. Common in legacy healthcare systems with infrequent updates.</p>
+        <div class="threat-mitigation">→ OWASP Dependency-Check + Trivy SCA</div>
+      </div>
+      <div class="threat-card low">
+        <div class="threat-head">
+          <div class="threat-title">Misconfigured Cloud Resources</div>
+          <span class="sev-badge sev-low">LOW</span>
+        </div>
+        <p>S3 buckets with public access, overly permissive IAM roles, or unencrypted RDS instances exposing PHI inadvertently.</p>
+        <div class="threat-mitigation">→ AWS Config Rules + Checkov IaC scan</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAST DAST -->
+  <section class="section" id="sast-dast">
+    <div class="section-tag">03 — Code Security</div>
+    <h2>SAST &amp; DAST Scanning</h2>
+    <p>
+      Static Application Security Testing (SAST) analyzes source code for vulnerabilities before runtime.
+      Dynamic Application Security Testing (DAST) attacks a running instance to find exploitable issues.
+      Both are required for HIPAA Technical Safeguards compliance.
+    </p>
+
+    <h3>Pre-commit Security Hooks</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">.pre-commit-config.yaml</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="tag-hl">repos</span>:
+  <span class="cmt"># Detect secrets before they enter version control</span>
+  - <span class="tag-hl">repo</span>: <span class="str">https://github.com/gitleaks/gitleaks</span>
+    <span class="tag-hl">rev</span>: v8.18.0
+    <span class="tag-hl">hooks</span>:
+      - <span class="tag-hl">id</span>: gitleaks
+
+  <span class="cmt"># Python SAST (bandit)</span>
+  - <span class="tag-hl">repo</span>: <span class="str">https://github.com/PyCQA/bandit</span>
+    <span class="tag-hl">rev</span>: 1.7.7
+    <span class="tag-hl">hooks</span>:
+      - <span class="tag-hl">id</span>: bandit
+        <span class="tag-hl">args</span>: [<span class="str">"-r"</span>, <span class="str">"src/"</span>, <span class="str">"-ll"</span>]
+
+  <span class="cmt"># Detect PHI patterns (custom regex)</span>
+  - <span class="tag-hl">repo</span>: local
+    <span class="tag-hl">hooks</span>:
+      - <span class="tag-hl">id</span>: phi-detector
+        <span class="tag-hl">name</span>: PHI Pattern Detector
+        <span class="tag-hl">entry</span>: python scripts/phi_scan.py
+        <span class="tag-hl">language</span>: python
+        <span class="tag-hl">types</span>: [python, javascript, typescript]</pre>
+    </div>
+
+    <h3>OWASP ZAP DAST in Jenkins</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">Jenkinsfile — DAST Stage</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">stage</span>(<span class="str">'DAST — OWASP ZAP'</span>) {
+  <span class="kw">steps</span> {
+    <span class="fn">script</span> {
+      <span class="cmt">// Spin up ZAP proxy container</span>
+      sh <span class="str">"""
+        docker run --rm --network=test-net \\
+          -v \$(pwd)/zap-reports:/zap/wrk/ \\
+          ghcr.io/zaproxy/zaproxy:stable zap-api-scan.py \\
+          -t http://app-staging:3000/openapi.json \\
+          -f openapi \\
+          -r zap-report.html \\
+          -w zap-report.md \\
+          -x zap-report.xml \\
+          -I \\                        <span class="cmt"># Don't fail on warnings</span>
+          -z "-config scanner.maxScanDurationInMins=10"
+      """</span>
+
+      <span class="cmt">// Parse XML for HIGH findings — fail build if found</span>
+      def zapReport = readFile(<span class="str">'zap-reports/zap-report.xml'</span>)
+      <span class="kw">if</span> (zapReport.contains(<span class="str">'riskdesc="High'</span>)) {
+        error(<span class="str">'DAST: HIGH severity vulnerabilities found. Build blocked.'</span>)
+      }
+
+      <span class="cmt">// Archive reports</span>
+      <span class="fn">publishHTML</span>(target: [
+        reportDir: <span class="str">'zap-reports'</span>,
+        reportFiles: <span class="str">'zap-report.html'</span>,
+        reportName: <span class="str">'OWASP ZAP DAST Report'</span>
+      ])
+    }
+  }
+}</pre>
+    </div>
+  </section>
+
+  <!-- SECRETS -->
+  <section class="section" id="secrets">
+    <div class="section-tag">04 — Secrets Management</div>
+    <h2>HashiCorp Vault for PHI Systems</h2>
+    <p>
+      No credentials should ever exist in environment variables, Kubernetes Secrets (base64 only!), or configuration files.
+      HashiCorp Vault provides dynamic secrets, automatic rotation, and a complete audit trail for every secret access —
+      essential for HIPAA audit requirements.
+    </p>
+
+    <div class="alert alert-danger">
+      <span class="alert-icon">⛔</span>
+      <div class="alert-body">
+        <strong>HIPAA Violation Risk</strong>
+        <p>Kubernetes Secrets are only base64-encoded, not encrypted by default. Always enable etcd encryption at rest and use Vault for any secret that touches PHI systems. Unencrypted secrets violate HIPAA Technical Safeguards §164.312(a)(2)(iv).</p>
+      </div>
+    </div>
+
+    <h3>Vault Policy for Healthcare App</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">vault/policies/healthcare-app.hcl</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cmt"># Policy for healthcare application service account</span>
+<span class="cmt"># Principle of least privilege — only paths required</span>
+
+<span class="kw">path</span> <span class="str">"database/creds/ehr-readonly"</span> {
+  <span class="key">capabilities</span> = [<span class="str">"read"</span>]
+  <span class="cmt"># Dynamic credentials — rotate every 1h</span>
+}
+
+<span class="kw">path</span> <span class="str">"secret/data/healthcare/+/api-keys"</span> {
+  <span class="key">capabilities</span> = [<span class="str">"read"</span>]
+}
+
+<span class="kw">path</span> <span class="str">"pki/issue/healthcare-internal"</span> {
+  <span class="key">capabilities</span> = [<span class="str">"create"</span>, <span class="str">"update"</span>]
+  <span class="cmt"># TLS cert issuance for mTLS between services</span>
+}
+
+<span class="cmt"># Explicitly deny access to PHI encryption keys</span>
+<span class="kw">path</span> <span class="str">"transit/keys/phi-encryption"</span> {
+  <span class="key">capabilities</span> = [<span class="str">"deny"</span>]
+}
+
+<span class="cmt"># Allow encryption/decryption operations, NOT key export</span>
+<span class="kw">path</span> <span class="str">"transit/encrypt/phi-encryption"</span> {
+  <span class="key">capabilities</span> = [<span class="str">"update"</span>]
+}
+
+<span class="kw">path</span> <span class="str">"transit/decrypt/phi-encryption"</span> {
+  <span class="key">capabilities</span> = [<span class="str">"update"</span>]
+}</pre>
+    </div>
+
+    <h3>Kubernetes Vault Agent Injector</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">k8s/deployment-annotated.yaml (excerpt)</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="tag-hl">metadata</span>:
+  <span class="tag-hl">annotations</span>:
+    <span class="cmt"># Vault Agent sidecar injection</span>
+    vault.hashicorp.com/agent-inject: <span class="str">"true"</span>
+    vault.hashicorp.com/role: <span class="str">"healthcare-app"</span>
+
+    <span class="cmt"># Inject DB credentials as file (not env var)</span>
+    vault.hashicorp.com/agent-inject-secret-db: <span class="str">"database/creds/ehr-readonly"</span>
+    vault.hashicorp.com/agent-inject-template-db: |
+      {{- with secret <span class="str">"database/creds/ehr-readonly"</span> -}}
+      DB_USER={{ .Data.username }}
+      DB_PASS={{ .Data.password }}
+      DB_HOST=ehr-db.internal:5432
+      {{- end }}
+
+    <span class="cmt"># TLS certificate for mTLS</span>
+    vault.hashicorp.com/agent-inject-secret-tls: <span class="str">"pki/issue/healthcare-internal"</span>
+
+    <span class="cmt"># Auto-renew credentials before expiry</span>
+    vault.hashicorp.com/agent-pre-populate-only: <span class="str">"false"</span></pre>
+    </div>
+  </section>
+
+  <!-- NETWORK -->
+  <section class="section" id="network">
+    <div class="section-tag">05 — Network Security</div>
+    <h2>Network Segmentation &amp; mTLS</h2>
+    <p>
+      All PHI-handling services must communicate exclusively over mutually-authenticated TLS (mTLS).
+      Kubernetes NetworkPolicies enforce strict egress/ingress rules, preventing lateral movement in case of compromise.
+    </p>
+
+    <h3>NetworkPolicy — PHI Service Isolation</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">k8s/network-policy-ehr.yaml</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="tag-hl">apiVersion</span>: networking.k8s.io/v1
+<span class="tag-hl">kind</span>: NetworkPolicy
+<span class="tag-hl">metadata</span>:
+  <span class="tag-hl">name</span>: ehr-phi-isolation
+  <span class="tag-hl">namespace</span>: healthcare
+<span class="tag-hl">spec</span>:
+  <span class="tag-hl">podSelector</span>:
+    <span class="tag-hl">matchLabels</span>:
+      <span class="tag-hl">data-class</span>: phi
+  <span class="tag-hl">policyTypes</span>:
+  - Ingress
+  - Egress
+
+  <span class="tag-hl">ingress</span>:
+  - <span class="tag-hl">from</span>:
+    <span class="cmt"># Only allow traffic from API gateway with mTLS cert</span>
+    - <span class="tag-hl">podSelector</span>:
+        <span class="tag-hl">matchLabels</span>:
+          <span class="tag-hl">role</span>: api-gateway
+          <span class="tag-hl">istio-mtls</span>: <span class="str">"enabled"</span>
+    <span class="tag-hl">ports</span>:
+    - <span class="tag-hl">protocol</span>: TCP
+      <span class="tag-hl">port</span>: <span class="num">8443</span>    <span class="cmt"># HTTPS only</span>
+
+  <span class="tag-hl">egress</span>:
+  - <span class="tag-hl">to</span>:
+    <span class="cmt"># Only allow connection to encrypted EHR database</span>
+    - <span class="tag-hl">podSelector</span>:
+        <span class="tag-hl">matchLabels</span>:
+          <span class="tag-hl">role</span>: ehr-database
+    <span class="tag-hl">ports</span>:
+    - <span class="tag-hl">protocol</span>: TCP
+      <span class="tag-hl">port</span>: <span class="num">5432</span>    <span class="cmt"># Postgres TLS</span>
+
+  <span class="cmt"># Block ALL other ingress/egress (default deny)</span></pre>
+    </div>
+  </section>
+
+  <!-- HIPAA -->
+  <section class="section" id="hipaa">
+    <div class="section-tag">06 — Compliance</div>
+    <h2>HIPAA Technical Safeguards Mapping</h2>
+    <p>
+      Every HIPAA Technical Safeguard requirement must map to a concrete DevSecOps control implemented in the pipeline.
+      The following table maps HIPAA §164.312 to specific tooling.
+    </p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>HIPAA Safeguard</th>
+            <th>Section</th>
+            <th>Implementation</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Access Control</strong> — Unique user ID</td>
+            <td style="font-family:var(--mono);font-size:.72rem">§164.312(a)(2)(i)</td>
+            <td>Keycloak SSO + RBAC in K8s, no shared accounts</td>
+            <td><span class="status-pass">✓ PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Encryption &amp; Decryption</strong></td>
+            <td style="font-family:var(--mono);font-size:.72rem">§164.312(a)(2)(iv)</td>
+            <td>AES-256 at rest (etcd), TLS 1.3 in transit, Vault Transit</td>
+            <td><span class="status-pass">✓ PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Audit Controls</strong></td>
+            <td style="font-family:var(--mono);font-size:.72rem">§164.312(b)</td>
+            <td>Splunk SIEM + Loki structured logging, 6-year retention</td>
+            <td><span class="status-pass">✓ PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Integrity — PHI alteration detection</strong></td>
+            <td style="font-family:var(--mono);font-size:.72rem">§164.312(c)(1)</td>
+            <td>SHA-256 checksums on PHI records, immutable audit log</td>
+            <td><span class="status-pass">✓ PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Person or Entity Authentication</strong></td>
+            <td style="font-family:var(--mono);font-size:.72rem">§164.312(d)</td>
+            <td>MFA enforced for all PHI access, FIDO2 hardware keys for admins</td>
+            <td><span class="status-pass">✓ PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Transmission Security</strong></td>
+            <td style="font-family:var(--mono);font-size:.72rem">§164.312(e)(2)(ii)</td>
+            <td>mTLS Istio service mesh, TLS 1.3 minimum, no TLS 1.0/1.1</td>
+            <td><span class="status-pass">✓ PASS</span></td>
+          </tr>
+          <tr>
+            <td><strong>Emergency Access Procedure</strong></td>
+            <td style="font-family:var(--mono);font-size:.72rem">§164.312(a)(2)(ii)</td>
+            <td>Break-glass procedures with enhanced audit logging + PagerDuty alert</td>
+            <td><span class="status-warn">⚠ REVIEW</span></td>
+          </tr>
+          <tr>
+            <td><strong>Automatic Logoff</strong></td>
+            <td style="font-family:var(--mono);font-size:.72rem">§164.312(a)(2)(iii)</td>
+            <td>15-min session timeout for clinical UIs, 8h for background services</td>
+            <td><span class="status-pass">✓ PASS</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- IAM -->
+  <section class="section" id="iam">
+    <div class="section-tag">07 — Identity & Access</div>
+    <h2>IAM &amp; RBAC Design</h2>
+    <p>
+      Role-Based Access Control must enforce the minimum necessary standard — each user role can access only
+      the PHI required to perform their clinical function. HIPAA minimum necessary standard §164.514(d).
+    </p>
+
+    <h3>Healthcare Role Definitions</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">k8s/rbac/healthcare-roles.yaml</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cmt"># Clinician Role — read-only PHI, no admin access</span>
+<span class="tag-hl">apiVersion</span>: rbac.authorization.k8s.io/v1
+<span class="tag-hl">kind</span>: ClusterRole
+<span class="tag-hl">metadata</span>:
+  <span class="tag-hl">name</span>: clinician
+  <span class="tag-hl">labels</span>:
+    <span class="tag-hl">hipaa-role</span>: <span class="str">"true"</span>
+    <span class="tag-hl">phi-access</span>: <span class="str">"read-only"</span>
+<span class="tag-hl">rules</span>:
+- <span class="tag-hl">apiGroups</span>: [<span class="str">"healthcare.io"</span>]
+  <span class="tag-hl">resources</span>: [<span class="str">"patientrecords"</span>, <span class="str">"prescriptions"</span>]
+  <span class="tag-hl">verbs</span>: [<span class="str">"get"</span>, <span class="str">"list"</span>]
+  <span class="cmt"># No create/update/delete without audit approval</span>
+---
+<span class="cmt"># Pharmacist — specific prescription access</span>
+<span class="tag-hl">apiVersion</span>: rbac.authorization.k8s.io/v1
+<span class="tag-hl">kind</span>: ClusterRole
+<span class="tag-hl">metadata</span>:
+  <span class="tag-hl">name</span>: pharmacist
+<span class="tag-hl">rules</span>:
+- <span class="tag-hl">apiGroups</span>: [<span class="str">"healthcare.io"</span>]
+  <span class="tag-hl">resources</span>: [<span class="str">"prescriptions"</span>]
+  <span class="tag-hl">verbs</span>: [<span class="str">"get"</span>, <span class="str">"list"</span>, <span class="str">"update"</span>]
+- <span class="cmt"># Denied: patientrecords, billing, admin</span>
+---
+<span class="cmt"># DevOps Engineer — NO PHI access, infra only</span>
+<span class="tag-hl">apiVersion</span>: rbac.authorization.k8s.io/v1
+<span class="tag-hl">kind</span>: ClusterRole
+<span class="tag-hl">metadata</span>:
+  <span class="tag-hl">name</span>: devops-engineer
+<span class="tag-hl">rules</span>:
+- <span class="tag-hl">apiGroups</span>: [<span class="str">""</span>]
+  <span class="tag-hl">resources</span>: [<span class="str">"pods"</span>, <span class="str">"services"</span>, <span class="str">"deployments"</span>]
+  <span class="tag-hl">verbs</span>: [<span class="str">"get"</span>, <span class="str">"list"</span>, <span class="str">"create"</span>, <span class="str">"update"</span>, <span class="str">"delete"</span>]
+- <span class="cmt"># Explicitly denied: patientrecords, PHI namespaces</span></pre>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">👤</div>
+        <h4>Zero Trust Architecture</h4>
+        <p>Never trust, always verify. Every service-to-service call is authenticated via mTLS certificates issued by Vault PKI.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔐</div>
+        <h4>Just-In-Time Access</h4>
+        <p>Elevated PHI access is granted on-demand with time limits (max 1h), full audit trail, and automatic revocation.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔑</div>
+        <h4>MFA Enforcement</h4>
+        <p>All clinical staff require hardware FIDO2 keys or TOTP for any PHI access. Password-only auth is blocked at the IdP level.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📋</div>
+        <h4>Quarterly Access Reviews</h4>
+        <p>Automated reports flag unused roles and overprivileged accounts for quarterly review by Compliance and Security teams.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- AUDIT -->
+  <section class="section" id="audit">
+    <div class="section-tag">08 — Audit &amp; Logging</div>
+    <h2>HIPAA Audit Logging</h2>
+    <p>
+      HIPAA mandates recording all access to PHI with who, what, when, and from where.
+      Logs must be immutable, tamper-evident, retained for 6 years, and available within 24 hours of a request.
+    </p>
+
+    <div class="audit-log">
+      <div class="audit-header">
+        <span>📋 PHI Access Audit Log — Live Stream</span>
+        <span id="log-time" style="color:rgba(125,250,237,.6)"></span>
+      </div>
+      <div id="log-entries">
+        <div class="audit-entry">
+          <span class="ae-time">08:31:02</span>
+          <span class="ae-level ae-info">INFO </span>
+          <span class="ae-msg">Patient #P8821 record accessed — View</span>
+          <span class="ae-user">dr.chen@hospital</span>
+        </div>
+        <div class="audit-entry">
+          <span class="ae-time">08:31:45</span>
+          <span class="ae-level ae-info">INFO </span>
+          <span class="ae-msg">Prescription #RX-4491 updated — status:dispensed</span>
+          <span class="ae-user">pharm.lee@hospital</span>
+        </div>
+        <div class="audit-entry">
+          <span class="ae-time">08:32:11</span>
+          <span class="ae-level ae-warn">WARN </span>
+          <span class="ae-msg">Bulk export request (500+ records) — pending approval</span>
+          <span class="ae-user">analyst.kim@hospital</span>
+        </div>
+        <div class="audit-entry">
+          <span class="ae-time">08:33:04</span>
+          <span class="ae-level ae-error">ERROR</span>
+          <span class="ae-msg">Unauthorized PHI access attempt — IP: 192.168.4.88</span>
+          <span class="ae-user">unknown@external</span>
+        </div>
+        <div class="audit-entry">
+          <span class="ae-time">08:33:09</span>
+          <span class="ae-level ae-info">INFO </span>
+          <span class="ae-msg">Vault secret accessed — path: database/creds/ehr-readonly</span>
+          <span class="ae-user">svc-account:ehr-app</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Structured Audit Log Format</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">audit-event.json (HIPAA-compliant schema)</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre>{
+  <span class="key">"event_id"</span>:       <span class="str">"evt_01HGX3K9P2QZ8VFNB7M4CWDJ"</span>,
+  <span class="key">"timestamp"</span>:      <span class="str">"2024-11-15T08:31:02.441Z"</span>,
+  <span class="key">"event_type"</span>:     <span class="str">"PHI_ACCESS"</span>,
+  <span class="key">"action"</span>:         <span class="str">"READ"</span>,
+  <span class="key">"resource"</span>: {
+    <span class="key">"type"</span>:          <span class="str">"PatientRecord"</span>,
+    <span class="key">"id"</span>:            <span class="str">"P8821"</span>,
+    <span class="key">"phi_category"</span>:  <span class="str">"DIAGNOSIS"</span>      <span class="cmt">// PHI type for HIPAA categorization</span>
+  },
+  <span class="key">"actor"</span>: {
+    <span class="key">"user_id"</span>:       <span class="str">"usr_dr_chen"</span>,
+    <span class="key">"role"</span>:          <span class="str">"CLINICIAN"</span>,
+    <span class="key">"department"</span>:   <span class="str">"Oncology"</span>,
+    <span class="key">"ip_address"</span>:   <span class="str">"10.0.1.45"</span>,
+    <span class="key">"session_id"</span>:   <span class="str">"sess_7f8a3b"</span>
+  },
+  <span class="key">"outcome"</span>:        <span class="str">"SUCCESS"</span>,
+  <span class="key">"purpose"</span>:        <span class="str">"TREATMENT"</span>,    <span class="cmt">// HIPAA-required purpose justification</span>
+  <span class="key">"checksum"</span>:       <span class="str">"sha256:a3f9..."</span> <span class="cmt">// Tamper-evidence</span>
+}</pre>
+    </div>
+  </section>
+
+  <!-- PIPELINE -->
+  <section class="section" id="pipeline">
+    <div class="section-tag">09 — CI/CD Security</div>
+    <h2>Secure Jenkins Pipeline</h2>
+    <p>
+      The healthcare DevSecOps pipeline gates every deployment through mandatory security checks.
+      No PHI-adjacent system can be deployed unless all security stages pass.
+    </p>
+
+    <h3>Complete Secure Pipeline</h3>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <span class="code-filename">Jenkinsfile — Healthcare DevSecOps</span>
+        <button class="code-copy" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">pipeline</span> {
+  <span class="kw">agent</span> { label <span class="str">'secure-agent'</span> }  <span class="cmt">// Hardened Jenkins agent</span>
+
+  <span class="tag-hl">environment</span> {
+    VAULT_ADDR   = credentials(<span class="str">'vault-address'</span>)
+    REGISTRY     = credentials(<span class="str">'registry-url'</span>)
+    SONAR_TOKEN  = credentials(<span class="str">'sonarqube-token'</span>)
+  }
+
+  <span class="kw">stages</span> {
+
+    <span class="kw">stage</span>(<span class="str">'Secrets Detection'</span>) {
+      <span class="kw">steps</span> {
+        sh <span class="str">'gitleaks detect --source . --exit-code 1'</span>
+        sh <span class="str">'trufflehog git file://. --only-verified'</span>
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'SAST — SonarQube'</span>) {
+      <span class="kw">steps</span> {
+        sh <span class="str">"""
+          sonar-scanner \\
+            -Dsonar.projectKey=healthcare-ehr \\
+            -Dsonar.sources=src/ \\
+            -Dsonar.tests=tests/ \\
+            -Dsonar.qualitygate.wait=true \\
+            -Dsonar.security.hotspots=true
+        """</span>
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'PHI Pattern Scan'</span>) {
+      <span class="kw">steps</span> {
+        sh <span class="str">"""
+          <span class="cmt"># Scan for hardcoded SSN, MRN, DOB patterns</span>
+          python scripts/phi_scanner.py --path src/ \\
+            --patterns config/phi-patterns.yaml \\
+            --fail-on-match
+        """</span>
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'SCA — Dependency Check'</span>) {
+      <span class="kw">steps</span> {
+        sh <span class="str">"""
+          dependency-check --scan . \\
+            --failOnCVSS 7 \\
+            --format HTML,JSON \\
+            --out reports/dependency-check/
+        """</span>
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Build &amp; Sign Image'</span>) {
+      <span class="kw">steps</span> {
+        <span class="fn">script</span> {
+          sh <span class="str">"docker build -t ${REGISTRY}/ehr:${GIT_COMMIT[0..7]} ."</span>
+          <span class="cmt">// Sign with Cosign for supply chain integrity</span>
+          sh <span class="str">"cosign sign --key vault://transit/sign-key ${REGISTRY}/ehr:${GIT_COMMIT[0..7]}"</span>
+        }
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Container Scan — Trivy'</span>) {
+      <span class="kw">steps</span> {
+        sh <span class="str">"""
+          trivy image \\
+            --exit-code 1 \\
+            --severity HIGH,CRITICAL \\
+            --ignore-unfixed \\
+            --format sarif \\
+            --output reports/trivy.sarif \\
+            ${REGISTRY}/ehr:${GIT_COMMIT[0..7]}
+        """</span>
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'OPA Policy Check'</span>) {
+      <span class="kw">steps</span> {
+        sh <span class="str">"""
+          <span class="cmt"># Validate K8s manifests against HIPAA OPA policies</span>
+          conftest test k8s/ \\
+            --policy policies/hipaa/ \\
+            --all-namespaces
+        """</span>
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Deploy to Staging'</span>) {
+      <span class="kw">steps</span> {
+        sh <span class="str">'helm upgrade --install ehr-staging ./helm/ehr --values values/staging.yaml'</span>
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'DAST — OWASP ZAP'</span>) {
+      <span class="kw">steps</span> {
+        sh <span class="str">"""
+          docker run --rm --network=test-net \\
+            ghcr.io/zaproxy/zaproxy:stable zap-api-scan.py \\
+            -t http://ehr-staging:8080/openapi.json \\
+            -f openapi -I -r reports/zap.html
+        """</span>
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Compliance Gate'</span>) {
+      <span class="kw">steps</span> {
+        <span class="fn">script</span> {
+          def report = readJSON file: <span class="str">'reports/compliance-summary.json'</span>
+          <span class="kw">if</span> (report.criticalFindings &gt; <span class="num">0</span>) {
+            error(<span class="str">"HIPAA Compliance FAILED: ${report.criticalFindings} critical issues"</span>)
+          }
+          <span class="fn">echo</span> <span class="str">"✅ Compliance Gate PASSED"</span>
+        }
+      }
+    }
+
+    <span class="kw">stage</span>(<span class="str">'Deploy to Production'</span>) {
+      <span class="kw">when</span> { branch <span class="str">'main'</span> }
+      <span class="kw">input</span> {
+        message <span class="str">"Deploy to Production? Compliance officer approval required."</span>
+        submitter <span class="str">"compliance-officer,ciso"</span>
+      }
+      <span class="kw">steps</span> {
+        sh <span class="str">'helm upgrade --install ehr ./helm/ehr --values values/production.yaml'</span>
+      }
+    }
+  }
+}</pre>
+    </div>
+  </section>
+
+  <!-- INCIDENT -->
+  <section class="section" id="incident">
+    <div class="section-tag">10 — Incident Response</div>
+    <h2>Security Incident Response</h2>
+    <p>
+      HIPAA Breach Notification Rule §164.400 requires notifying HHS and affected individuals within 60 days of
+      discovering a breach. An automated incident response pipeline dramatically compresses detection-to-containment time.
+    </p>
+
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h5>Detection &lt;5 min — SIEM Alert</h5>
+          <p>Splunk/ELK detects anomalous PHI access patterns, unusual data export volumes, or failed auth spikes. PagerDuty notifies on-call security engineer within 30 seconds.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h5>Containment &lt;15 min — Automated Isolation</h5>
+          <p>Runbook automation applies Kubernetes NetworkPolicy to isolate the compromised pod. Vault revokes dynamic credentials for the affected service account immediately.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h5>Assessment &lt;4 hrs — PHI Impact Analysis</h5>
+          <p>Security team analyzes immutable audit logs to determine which patient records were accessed, by whom, and whether PHI was exfiltrated. HIPAA breach determination is made.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h5>Notification &lt;60 days — HHS + Patients</h5>
+          <p>If PHI breach confirmed, HHS breach portal submission and affected patient notifications are dispatched. Internal root cause analysis documents remediation steps.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h5>Recovery — Remediation + Hardening</h5>
+          <p>Vulnerability is patched, security controls updated, pipeline policies tightened. Post-incident review updates threat model and OPA policies to prevent recurrence.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECKLIST -->
+  <section class="section" id="checklist">
+    <div class="section-tag">11 — Go-Live</div>
+    <h2>HIPAA DevSecOps Launch Checklist</h2>
+    <p>Click items to toggle completion status. This checklist must be fully green before deploying a PHI-handling system.</p>
+
+    <div class="policy-checker">
+      <div class="pc-header">🛡 Pre-Production Security Checklist</div>
+      <div class="pc-body" id="checklist-body">
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">PHI Encryption at Rest</div><div class="pc-desc">etcd encrypted, RDS encrypted, all PVCs with encrypted storage class</div></div>
+          <span class="pc-status pc-pass">✓ PASS</span>
+        </div>
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">TLS 1.3 Enforced — No TLS 1.0/1.1</div><div class="pc-desc">All ingress controllers, internal services, database connections</div></div>
+          <span class="pc-status pc-pass">✓ PASS</span>
+        </div>
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">MFA for All Clinical Access</div><div class="pc-desc">Keycloak MFA enforcement for PHI-adjacent roles, breakglass documented</div></div>
+          <span class="pc-status pc-pass">✓ PASS</span>
+        </div>
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">Vault Secrets — No K8s Native Secrets for PHI</div><div class="pc-desc">All DB credentials, API keys routed through Vault Agent injector</div></div>
+          <span class="pc-status pc-warn">⚠ REVIEW</span>
+        </div>
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">SAST + DAST Gates Passing</div><div class="pc-desc">SonarQube quality gate pass, ZAP zero HIGH findings</div></div>
+          <span class="pc-status pc-pass">✓ PASS</span>
+        </div>
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">Audit Logging to Immutable Store</div><div class="pc-desc">PHI access logs → Splunk with 6-year retention, tamper-evident</div></div>
+          <span class="pc-status pc-pass">✓ PASS</span>
+        </div>
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">Network Policies Enforced</div><div class="pc-desc">PHI namespace isolated, default-deny all, only whitelisted paths open</div></div>
+          <span class="pc-status pc-pass">✓ PASS</span>
+        </div>
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">BAA Signed with All Vendors</div><div class="pc-desc">Business Associate Agreements with AWS, Splunk, HashiCorp, etc.</div></div>
+          <span class="pc-status pc-fail">✗ FAIL</span>
+        </div>
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">Penetration Test Report (Last 12mo)</div><div class="pc-desc">External pen test with no critical/high open findings</div></div>
+          <span class="pc-status pc-warn">⚠ REVIEW</span>
+        </div>
+        <div class="pc-item" onclick="toggleCheck(this)">
+          <div><div class="pc-name">Incident Response Plan Tested</div><div class="pc-desc">Tabletop exercise completed, runbooks automated, PagerDuty configured</div></div>
+          <span class="pc-status pc-pass">✓ PASS</span>
+        </div>
+      </div>
+    </div>
+    <div id="checklist-score" style="font-family:var(--mono);font-size:.75rem;color:var(--muted);margin-top:.75rem"></div>
+  </section>
+
+</main>
+
+<script>
+// ── Progress Bar ──
+window.addEventListener('scroll', () => {
+  const st = document.documentElement.scrollTop;
+  const sh = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progress-fill').style.width = (sh > 0 ? st/sh*100 : 0) + '%';
+});
+
+// ── Active Nav ──
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('#nav a');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id));
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+sections.forEach(s => obs.observe(s));
+
+// ── Copy Code ──
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'copied!';
+    btn.style.color = '#7dfaed';
+    setTimeout(() => { btn.textContent = 'copy'; btn.style.color = ''; }, 2000);
+  });
+}
+
+// ── Mobile Sidebar ──
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ── Audit Log Live ──
+const logMessages = [
+  ['INFO ', 'Patient #P9034 record accessed — View', 'dr.patel@hospital', 'ae-info'],
+  ['INFO ', 'Lab result #LAB-8812 viewed', 'nurse.wong@hospital', 'ae-info'],
+  ['WARN ', 'Login from new device — MFA verified', 'dr.chen@hospital', 'ae-warn'],
+  ['INFO ', 'Prescription #RX-5509 created', 'dr.shah@hospital', 'ae-info'],
+  ['ERROR', 'Failed PHI access — insufficient role', 'intern.kim@hospital', 'ae-error'],
+  ['INFO ', 'Bulk de-identify export approved', 'research@hospital', 'ae-info'],
+  ['WARN ', 'Session timeout — auto-logoff applied', 'nurse.ali@hospital', 'ae-warn'],
+];
+let logIdx = 0;
+
+function addLogEntry() {
+  const container = document.getElementById('log-entries');
+  const [level, msg, user, cls] = logMessages[logIdx % logMessages.length];
+  const now = new Date();
+  const t = now.toTimeString().slice(0,8);
+  const entry = document.createElement('div');
+  entry.className = 'audit-entry';
+  entry.style.opacity = '0';
+  entry.innerHTML = `<span class="ae-time">${t}</span><span class="ae-level ${cls}">${level}</span><span class="ae-msg">${msg}</span><span class="ae-user">${user}</span>`;
+  container.appendChild(entry);
+  setTimeout(() => { entry.style.transition = 'opacity .4s'; entry.style.opacity = '1'; }, 50);
+  if (container.children.length > 8) container.removeChild(container.firstChild);
+  logIdx++;
+  document.getElementById('log-time').textContent = t;
+}
+
+setInterval(addLogEntry, 3200);
+
+// ── Checklist ──
+function toggleCheck(item) {
+  const badge = item.querySelector('.pc-status');
+  if (badge.classList.contains('pc-pass')) {
+    badge.classList.replace('pc-pass', 'pc-fail');
+    badge.textContent = '✗ FAIL';
+  } else if (badge.classList.contains('pc-fail')) {
+    badge.classList.replace('pc-fail', 'pc-warn');
+    badge.textContent = '⚠ REVIEW';
+  } else {
+    badge.classList.replace('pc-warn', 'pc-pass');
+    badge.textContent = '✓ PASS';
+  }
+  updateScore();
+}
+
+function updateScore() {
+  const items = document.querySelectorAll('.pc-status');
+  const pass = [...items].filter(i => i.classList.contains('pc-pass')).length;
+  const fail = [...items].filter(i => i.classList.contains('pc-fail')).length;
+  const warn = [...items].filter(i => i.classList.contains('pc-warn')).length;
+  const score = document.getElementById('checklist-score');
+  score.textContent = `Score: ${pass}/${items.length} PASS · ${warn} REVIEW · ${fail} FAIL`;
+  score.style.color = fail > 0 ? 'var(--red)' : warn > 0 ? 'var(--amber)' : 'var(--teal)';
+}
+
+updateScore();
+</script>
+</body>
+</html>
